@@ -5,19 +5,20 @@
 
   <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find otter_gazebo)/worlds/otter.world"/>
+
+    <!--<arg name="world_name" value="$(find otter_gazebo)/worlds/otter.world"/>-->
+    <arg name="world_name" value="$(find jackal_gazebo)/worlds/jackal_race.world" />
     <!-- more default parameters can be changed here -->
     <arg name="use_sim_time" value="$(arg use_sim_time)" />
+    <!--<arg name="gui" value="false"/>-->
+
   </include>
  
   <!-- Spawn the Otter -->
-  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find otter_description)/urdf/otter.xacro" />
+  <include file="$(find otter_description)/launch/description.launch" />
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model otter -param robot_description" />
 
   <!-- Launch controls -->
-  <!--
-  <include file="$(find otter_description)/launch/description.launch" />
   <include file="$(find otter_control)/launch/control.launch" />
-  -->
 
 </launch>

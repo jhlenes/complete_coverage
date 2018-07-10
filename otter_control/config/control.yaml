@@ -4,8 +4,8 @@ otter_joint_publisher:
 
 otter_velocity_controller:
   type: "diff_drive_controller/DiffDriveController"
-  left_wheel: ['front_left_wheel', 'rear_left_wheel']
-  right_wheel: ['front_right_wheel', 'rear_right_wheel']
+  left_wheel: ['front_left_wheel_joint', 'rear_left_wheel_joint']
+  right_wheel: ['front_right_wheel_joint', 'rear_right_wheel_joint']
   publish_rate: 50
   pose_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
   twist_covariance_diagonal: [0.001, 0.001, 0.001, 1000000.0, 1000000.0, 0.03]
@@ -13,10 +13,6 @@ otter_velocity_controller:
 
   k_l: 0.1
   k_r: 0.1
-
-  # Odometry fused with IMU is published by robot_localization, so
-  # no need to publish a TF based on encoders alone.
-  enable_odom_tf: false
 
   # Wheel separation and radius multipliers
   wheel_separation_multiplier: 1.5 # default: 1.0
@@ -35,4 +31,4 @@ otter_velocity_controller:
       has_velocity_limits    : true
       max_velocity           : 4.0   # rad/s
       has_acceleration_limits: true
-max_acceleration       : 25.0 # rad/s^2
+      max_acceleration       : 25.0 # rad/s^2

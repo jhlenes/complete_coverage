@@ -12,6 +12,7 @@
   <!-- base_link -->
   <gazebo reference="base_link">
     <material>Gazebo/Orange</material>
+    <turnGravityOff>false</turnGravityOff>
   </gazebo>
 
   <!-- lidar -->
@@ -48,6 +49,7 @@
   </gazebo>
 
   <!-- steering -->
+  <!--
   <gazebo>
     <plugin name="skid_steer_drive_controller" filename="libgazebo_ros_skid_steer_drive.so">
         <updateRate>100.0</updateRate>
@@ -67,5 +69,6 @@
         <covariance_yaw>0.0</covariance_yaw>
     </plugin>
   </gazebo>
+  -->
 
 </robot>
