@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
-<!-- Revolute-Revolute Manipulator -->
+
 <robot name="otter" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <!-- Constants for robot dimensions -->
   <xacro:property name="PI" value="3.1415926535897931"/>
-  <xacro:property name="mass" value="16.523" /> <!-- arbitrary value for mass -->
-  <xacro:property name="width" value="0.31" /> <!-- Square dimensions (widthxwidth) of beams -->
+  <xacro:property name="mass" value="16.523" />
+  <xacro:property name="width" value="0.31" />
   <xacro:property name="length" value="0.42" />
-  <xacro:property name="height1" value="0.184" /> <!-- Link 1 -->
-  <xacro:property name="axel_offset" value="0.05" /> <!-- Space btw top of beam and the each joint -->
+  <xacro:property name="height1" value="0.184" />
+  <xacro:property name="axel_offset" value="0.05" />
 
   <xacro:property name="wheelbase" value="0.262" />
   <xacro:property name="track" value="0.37559" />
@@ -28,6 +28,7 @@
 
   <!-- Import all Gazebo-customization elements, including Gazebo colors -->
   <xacro:include filename="$(find otter_description)/urdf/otter.gazebo" />
+
   <!-- Import Rviz colors -->
   <xacro:include filename="$(find otter_description)/urdf/materials.xacro" />
 
@@ -91,7 +92,7 @@
 
   <!-- Wheels -->
   <xacro:macro name="wheel" params="prefix *joint_pose">
-  <link name="${prefix}_wheel_link">
+    <link name="${prefix}_wheel_link">
       <visual>
         <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
         <geometry>
@@ -119,18 +120,16 @@
       <material>Gazebo/DarkGrey</material>
     </gazebo>
 
-    <joint name="${prefix}_wheel" type="continuous">
+    <joint name="${prefix}_wheel_joint" type="continuous">
       <parent link="base_link"/>
       <child link="${prefix}_wheel_link" />
       <xacro:insert_block name="joint_pose" />
       <axis xyz="0 1 0" />
     </joint>
 
-    <!-- In reality, Jackal has only two motors, one per side. However, it's more
-         straightforward for Gazebo to simulate as if there's an actuator per wheel. -->
     <transmission name="${prefix}_wheel_trans">
       <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${prefix}_wheel">
+      <joint name="${prefix}_wheel_joint">
         <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
       </joint>
       <actuator name="${prefix}_actuator">
@@ -150,6 +149,6 @@
   </xacro:wheel>
   <xacro:wheel prefix="rear_right">
     <origin xyz="${-wheelbase/2} ${-track/2} ${wheel_vertical_offset}" rpy="0 0 0" />
-</xacro:wheel>
+  </xacro:wheel>
 
 </robot>
