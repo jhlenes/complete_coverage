@@ -10,7 +10,7 @@
     <arg name="world_name" value="$(find jackal_gazebo)/worlds/jackal_race.world" />
     <!-- more default parameters can be changed here -->
     <arg name="use_sim_time" value="$(arg use_sim_time)" />
-    <!--<arg name="gui" value="false"/>-->
+    <arg name="gui" value="false"/>
 
   </include>
  
