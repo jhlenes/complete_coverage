@@ -20,7 +20,7 @@
     <sensor type="gpu_ray" name="head_laser_sensor">
       <pose>0 0 0 0 0 0</pose>
       <visualize>false</visualize>
-      <update_rate>40</update_rate>
+      <update_rate>15</update_rate>
       <ray>
         <scan>
           <horizontal>
@@ -33,7 +33,7 @@
         <range>
           <min>0.15</min>
           <max>12.0</max>
-          <resolution>0.02</resolution>
+          <resolution>0.01</resolution>
         </range>
         <noise>
           <type>gaussian</type>
@@ -47,28 +47,5 @@
       </plugin>
     </sensor>
   </gazebo>
-
-  <!-- steering -->
-  <!--
-  <gazebo>
-    <plugin name="skid_steer_drive_controller" filename="libgazebo_ros_skid_steer_drive.so">
-        <updateRate>100.0</updateRate>
-        <robotNamespace>/</robotNamespace>
-        <leftFrontJoint>front_left_wheel_joint</leftFrontJoint>
-        <rightFrontJoint>front_right_wheel_joint</rightFrontJoint>
-        <leftRearJoint>rear_left_wheel_joint</leftRearJoint>
-        <rightRearJoint>rear_right_wheel_joint</rightRearJoint>
-        <wheelSeparation>0.4</wheelSeparation>
-        <wheelDiameter>0.196</wheelDiameter>
-        <robotBaseFrame>base_link</robotBaseFrame>
-        <torque>200</torque>
-        <topicName>cmd_vel</topicName>
-        <broadcastTF>false</broadcastTF>
-        <covariance_x>0.0</covariance_x>
-        <covariance_y>0.0</covariance_y>
-        <covariance_yaw>0.0</covariance_yaw>
-    </plugin>
-  </gazebo>
-  -->
 
 </robot>

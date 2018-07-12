@@ -2,7 +2,7 @@
 <package format="2">
   <name>otter_gazebo</name>
   <version>0.0.0</version>
-  <description>The otter_gazebo package</description>
+  <description>Launchfiles to use Otter in Gazebo</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
@@ -50,6 +50,13 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
 
+  <exec_depend>gazebo_dev</exec_depend>
+  <exec_depend>gazebo_msgs</exec_depend>
+  <exec_depend>gazebo_plugins</exec_depend>
+  <exec_depend>gazebo_ros</exec_depend>
+
+  <exec_depend>otter_description</exec_depend>
+  <exec_depend>otter_control</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
