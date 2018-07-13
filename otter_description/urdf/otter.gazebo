@@ -17,9 +17,10 @@
 
   <!-- lidar -->
   <gazebo reference="laser">
-    <sensor type="gpu_ray" name="head_laser_sensor">
+    <material>Gazebo/Black</material>
+    <sensor type="ray" name="head_laser_sensor">
       <pose>0 0 0 0 0 0</pose>
-      <visualize>false</visualize>
+      <visualize>true</visualize>
       <update_rate>15</update_rate>
       <ray>
         <scan>
@@ -41,7 +42,7 @@
           <stddev>0.01</stddev>
         </noise>
       </ray>
-      <plugin name="gazebo_ros_head_laser_controller" filename="libgazebo_ros_gpu_laser.so">
+      <plugin name="gazebo_ros_head_laser_controller" filename="libgazebo_ros_laser.so">
         <topicName>scan</topicName>
         <frameName>laser</frameName>
       </plugin>

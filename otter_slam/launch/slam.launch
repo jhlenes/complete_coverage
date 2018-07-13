@@ -1,0 +1,25 @@
+<launch>
+
+    <arg name="lidar" default="true" />
+    <arg name="rviz" default="true" />
+
+    <!-- Start the lidar -->
+    <include file="$(find otter_slam)/launch/lidar.launch" if="$(arg lidar)" />
+
+    <!-- Set up transformations between the 'laser' and 'base_link' frames.
+        'laser' is the lidar, 'base_link' is the base of the robot. -->
+    <include file="$(find otter_description)/launch/description.launch" />
+
+    <!-- Start the cartographer node. This node does SLAM. -->
+    <node name="cartographer_node" pkg="cartographer_ros"
+        type="cartographer_node" args="
+            -configuration_directory $(find otter_slam)/config
+            -configuration_basename otter.lua"
+        output="screen">
+    </node>
+
+    <!-- Visualize SLAM in rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" required="true"
+        args="-d $(find otter_slam)/config/slam.rviz" if="$(arg rviz)" />
+
+</launch>

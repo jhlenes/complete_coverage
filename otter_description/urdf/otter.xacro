@@ -5,15 +5,12 @@
   <!-- Constants for robot dimensions -->
   <xacro:property name="PI" value="3.1415926535897931"/>
   <xacro:property name="mass" value="16.523" />
-  <xacro:property name="width" value="0.31" />
-  <xacro:property name="length" value="0.42" />
-  <xacro:property name="height1" value="0.184" />
-  <xacro:property name="axel_offset" value="0.05" />
+
+  <xacro:property name="laser_offset" value="0.05" />
 
   <xacro:property name="wheelbase" value="0.262" />
   <xacro:property name="track" value="0.37559" />
   <xacro:property name="wheel_vertical_offset" value="0.0345" />
-  <xacro:property name="footprint_vertical_offset" value="-0.0655" />
 
   <xacro:property name="wheel_radius" value="0.098" />
   <xacro:property name="wheel_width" value="0.040" />
@@ -21,10 +18,6 @@
   <xacro:property name="chassis_length" value="0.420" />
   <xacro:property name="chassis_width" value="0.310" />
   <xacro:property name="chassis_height" value="0.184" />
-
-  <xacro:property name="dummy_inertia" value="1e-09"/>
-
-  <xacro:property name="mount_spacing" value="0.120" />
 
   <!-- Import all Gazebo-customization elements, including Gazebo colors -->
   <xacro:include filename="$(find otter_description)/urdf/otter.gazebo" />
@@ -35,36 +28,29 @@
   <!-- Base Link -->
   <link name="base_link">
     <collision>
-      <origin xyz="0 0 ${height1/2}" rpy="0 0 0"/>
+      <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
       <geometry>
-	<box size="${length} ${width} ${height1}"/>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
       </geometry>
     </collision>
 
     <visual>
-      <origin xyz="0 0 ${height1/2}" rpy="0 0 0"/>
+      <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
       <geometry>
-	<box size="${length} ${width} ${height1}"/>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
       </geometry>
       <material name="orange"/>
     </visual>
 
     <inertial>
-      <origin xyz="0 0 ${height1/2}" rpy="0 0 0"/>
+      <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
       <mass value="${mass}"/>
       <inertia
-	  ixx="${mass / 12.0 * (width*width + height1*height1)}" ixy="0.0" ixz="0.0"
-	  iyy="${mass / 12.0 * (height1*height1 + width*width)}" iyz="0.0"
-	  izz="${mass / 12.0 * (width*width + width*width)}"/>
+          ixx="${mass / 12.0 * (chassis_width*chassis_width + chassis_height*chassis_height)}" ixy="0.0" ixz="0.0"
+          iyy="${mass / 12.0 * (chassis_height*chassis_height + chassis_width*chassis_width)}" iyz="0.0"
+          izz="${mass / 12.0 * (chassis_width*chassis_width + chassis_width*chassis_width)}"/>
     </inertial>
   </link>
-
-  <joint name="laser_joint" type="fixed">
-    <axis xyz="0 1 0" />
-    <origin xyz="0 0 ${height1 - axel_offset/2}" rpy="0 0 0"/>
-    <parent link="base_link"/>
-    <child link="laser"/>
-  </joint>
 
   <!-- Lidar -->
   <link name="laser">
@@ -80,7 +66,7 @@
       <geometry>
         <box size="0.1 0.1 0.1"/>
       </geometry>
-      <material name="orange"/>
+      <material name="black"/>
     </visual>
 
     <inertial>
@@ -89,6 +75,13 @@
       <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
     </inertial>
   </link>
+
+  <joint name="laser_joint" type="fixed">
+    <axis xyz="1 0 0" />
+    <origin xyz="0 0 ${chassis_height + laser_offset}" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="laser"/>
+  </joint>
 
   <!-- Wheels -->
   <xacro:macro name="wheel" params="prefix *joint_pose">
