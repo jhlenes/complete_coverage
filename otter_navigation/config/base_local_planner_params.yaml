@@ -9,3 +9,7 @@ TrajectoryPlannerROS:
   acc_lim_x: 0.5
 
   holonomic_robot: false
+
+  path_distance_bias: 32.0
+  goal_distance_bias: 20.0
+  occdist_scale: 0.02

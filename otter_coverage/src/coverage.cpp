@@ -17,8 +17,6 @@ namespace otter_coverage {
 
     Coverage::Coverage() {
 
-        ROS_WARN_STREAM("Constructor!");
-
         ros::NodeHandle nh;
 
         // subscribe to occupancy grid map from slam node
@@ -167,8 +165,6 @@ namespace otter_coverage {
         tileX = std::floor(otter.x / tileResolution) + originX;
         tileY = std::floor(otter.y / tileResolution) + originY;
 
-
-        // check if next tile is free for obstacles and not covered already
         static bool hasGoal = false;
         static int goalX = tileX;
         static int goalY = tileY;
@@ -177,6 +173,7 @@ namespace otter_coverage {
             M[tileX][tileY] = COVERED;
         }
 
+        // check if next tile is free for obstacles and not covered already
         if (M[tileX+1][tileY] != COVERED) {
             if (isFree(tileX+1, tileY)) {
                 if (!hasGoal) {

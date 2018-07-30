@@ -53,7 +53,7 @@ namespace otter_coverage {
             int originY = 50;
             int tileX = 50;
             int tileY = 50;
-            double tileResolution = 0.50;
+            double tileResolution = 1.0;
 
     };
 

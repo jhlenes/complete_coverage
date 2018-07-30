@@ -22,6 +22,11 @@ target_link_libraries(coverage ${catkin_LIBRARIES})
 add_executable(coverage_node src/coverage_node.cpp)
 target_link_libraries(coverage_node coverage)
 
+add_library(guidance src/guidance.cpp)
+target_link_libraries(guidance ${catkin_LIBRARIES})
+add_executable(guidance_node src/guidance_node.cpp)
+target_link_libraries(guidance_node guidance)
+
 ## Add custom (non compiling) targets so other files show up in QT Creator's project view.
 file(GLOB_RECURSE EXTRA_FILES */*)
 add_custom_target(${PROJECT_NAME}_OTHER_FILES ALL WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} SOURCES ${EXTRA_FILES})
