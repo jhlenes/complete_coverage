@@ -15,9 +15,12 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+
 ## Add nodes
+add_library(coverage src/coverage.cpp)
+target_link_libraries(coverage ${catkin_LIBRARIES})
 add_executable(coverage_node src/coverage_node.cpp)
-target_link_libraries(coverage_node ${catkin_LIBRARIES})
+target_link_libraries(coverage_node coverage)
 
 ## Add custom (non compiling) targets so other files show up in QT Creator's project view.
 file(GLOB_RECURSE EXTRA_FILES */*)

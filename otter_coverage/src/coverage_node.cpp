@@ -1,11 +1,12 @@
 #include <coverage/coverage.h>
 
 int main(int argc, char** argv){
-  ros::init(argc, argv, "coverage_node");
 
-  otter_coverage::Coverage coverage_node();
+    ros::init(argc, argv, "coverage_node");
 
-  ros::spin();
+    otter_coverage::Coverage coverage_node;
 
-  return(0);
+    ros::spin();
+
+    return(0);
 }

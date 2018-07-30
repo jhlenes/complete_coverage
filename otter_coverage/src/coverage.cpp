@@ -17,6 +17,8 @@ namespace otter_coverage {
 
     Coverage::Coverage() {
 
+        ROS_WARN_STREAM("Constructor!");
+
         ros::NodeHandle nh;
 
         // subscribe to occupancy grid map from slam node
