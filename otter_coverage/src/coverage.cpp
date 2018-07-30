@@ -20,7 +20,7 @@ namespace otter_coverage {
         ros::NodeHandle nh;
 
         // subscribe to occupancy grid map from slam node
-        ros::Subscriber sub = nh.subscribe("map", 1000, mapCallback);
+        ros::Subscriber sub = nh.subscribe("map", 1000, &Coverage::mapCallback, this);
 
         // publish next goal to the navigation stack's goal
         this->goalPub = nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
@@ -60,7 +60,7 @@ namespace otter_coverage {
                              transformStamped.transform.rotation.z, transformStamped.transform.rotation.w);
             this->otter.psi = tf::getYaw(q);
 
-            //BM();
+            BM();
 
             ros::spinOnce();
             rate.sleep();

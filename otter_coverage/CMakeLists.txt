@@ -16,7 +16,7 @@ include_directories(
 )
 
 ## Add nodes
-add_executable(coverage_node src/coverage.cpp)
+add_executable(coverage_node src/coverage_node.cpp)
 target_link_libraries(coverage_node ${catkin_LIBRARIES})
 
 ## Add custom (non compiling) targets so other files show up in QT Creator's project view.
