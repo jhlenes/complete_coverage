@@ -1,10 +1,7 @@
 #include <coverage/coverage.h>
 
-#include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf/tf.h>
-#include <nav_msgs/OccupancyGrid.h>
-#include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseStamped.h>
 
 #include <queue>
@@ -161,13 +158,14 @@ namespace otter_coverage {
         Step 4. Add the tile s to the mode M. Go to Step 1.
         */
 
-        // Find tile where robot is located
-        tileX = std::floor(otter.x / tileResolution) + originX;
-        tileY = std::floor(otter.y / tileResolution) + originY;
-
         static bool hasGoal = false;
-        static int goalX = tileX;
-        static int goalY = tileY;
+        static int goalX = originX;
+        static int goalY = originY;
+
+        // Find tile where robot is located
+        int tileX = std::floor(otter.x / tileResolution) + originX;
+        int tileY = std::floor(otter.y / tileResolution) + originY;
+
         if (goalX == tileX && goalY == tileY) {
             hasGoal = false;
             M[tileX][tileY] = COVERED;

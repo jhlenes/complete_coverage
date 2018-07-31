@@ -27,6 +27,11 @@ target_link_libraries(guidance ${catkin_LIBRARIES})
 add_executable(guidance_node src/guidance_node.cpp)
 target_link_libraries(guidance_node guidance)
 
+add_library(map_processing src/map_processing.cpp)
+target_link_libraries(map_processing ${catkin_LIBRARIES})
+add_executable(map_processing_node src/map_processing_node.cpp)
+target_link_libraries(map_processing_node map_processing)
+
 ## Add custom (non compiling) targets so other files show up in QT Creator's project view.
 file(GLOB_RECURSE EXTRA_FILES */*)
 add_custom_target(${PROJECT_NAME}_OTHER_FILES ALL WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} SOURCES ${EXTRA_FILES})

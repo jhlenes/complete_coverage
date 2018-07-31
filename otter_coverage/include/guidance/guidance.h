@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <nav_msgs/Path.h>
+#include <geometry_msgs/PoseStamped.h>
 
 namespace otter_coverage {
 
@@ -11,8 +12,11 @@ namespace otter_coverage {
             Guidance();
             ~Guidance();
         private:
-            nav_msgs::Path path;
+            void newWaypoint(const geometry_msgs::PoseStamped &waypoint);
+            void followPath(double x, double y, double psi);
 
+            int currentWp;
+            nav_msgs::Path waypoints;
 
     };
 

@@ -51,8 +51,6 @@ namespace otter_coverage {
             std::vector<tile> BP;
             int originX = 50;
             int originY = 50;
-            int tileX = 50;
-            int tileY = 50;
             double tileResolution = 1.0;
 
     };
