@@ -2,8 +2,7 @@
 #define OTTER_MAP_PROCESSING_H_
 
 #include <ros/ros.h>
-#include <nav_msgs/Path.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <nav_msgs/OccupancyGrid.h>
 
 namespace otter_coverage {
 
@@ -12,6 +11,7 @@ namespace otter_coverage {
             MapProcessor();
             ~MapProcessor();
         private:
+            void processMap(const nav_msgs::OccupancyGrid &grid);
     };
 
 }

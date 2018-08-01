@@ -19,12 +19,22 @@ namespace otter_coverage {
 
         ros::NodeHandle nh;
 
+        // subscribe to occupancy grid map from slam node
+        ros::Subscriber sub = nh.subscribe("map", 1000, &MapProcessor::processMap, this);
 
     }
 
     MapProcessor::~MapProcessor() {
 
     }
+
+    void MapProcessor::processMap(const nav_msgs::OccupancyGrid &grid) {
+
+    }
+
+
+
+
 
 
 }

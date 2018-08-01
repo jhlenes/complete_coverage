@@ -18,6 +18,16 @@ namespace otter_coverage {
             int currentWp;
             nav_msgs::Path waypoints;
 
+            ros::Publisher cmdVelPub;
+
+            const double PI = std::atan(1.0)*4;
+
+            // lookahead distance
+            double DELTA = 0.4;
+
+            // circle of acceptance
+            double R = 0.4;
+
     };
 
 }

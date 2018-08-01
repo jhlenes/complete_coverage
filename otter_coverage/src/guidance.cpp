@@ -19,7 +19,8 @@ namespace otter_coverage {
 
         ros::NodeHandle nh;
 
-        ros::Subscriber waypointSub = nh.subscribe("waypoint", 1000, &Guidance::newWaypoint, this);
+        ros::Subscriber waypointSub = nh.subscribe("move_base_simple/goal", 1000, &Guidance::newWaypoint, this);
+        this->cmdVelPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
 
         tf2_ros::Buffer tfBuffer;
         tf2_ros::TransformListener tfListener(tfBuffer);
@@ -68,7 +69,13 @@ namespace otter_coverage {
     void Guidance::followPath(double x, double y, double psi) {
 
         // Not enough waypoints to navigate from
-        if (currentWp < 1) {
+        if (currentWp < 1 || currentWp >= waypoints.poses.size()) {
+
+            // publish angle and speed
+            geometry_msgs::Twist cmd_vel;
+            cmd_vel.linear.x = 0.0;
+            cmd_vel.angular.z = 0.0;
+            this->cmdVelPub.publish(cmd_vel);
             return;
         }
 
@@ -82,6 +89,36 @@ namespace otter_coverage {
         // cross track error
         double e = -(x - p0.pose.position.x) * std::sin(alpha_k) + (y - p0.pose.position.y) * std::cos(alpha_k);
 
+        // velocity-path relative angle
+        double chi_r = std::atan(-e / DELTA);
+
+        // switch waypoints if close enough
+        if (std::pow(p1.pose.position.x - x, 2) + std::pow(p1.pose.position.y - y, 2) < std::pow(R, 2)) {
+            currentWp++;
+        }
+
+        // desired course angle
+        double chi_d = alpha_k + chi_r;
+
+        // calculate desired yaw rate
+        double chi_err = chi_d - psi;
+        if (chi_err > PI) {
+            chi_err -= PI;
+        } else if (chi_err < -PI) {
+            chi_err += PI;
+        }
+        double r = std::min(chi_err, 0.5);
+        r = std::max(r, -0.5);
+
+        // calculate desired speed
+        double u = 0.4 * (1 - std::abs(e) / 0.5);
+        u = std::max(u, 0.05);
+
+        // publish angle and speed
+        geometry_msgs::Twist cmd_vel;
+        cmd_vel.linear.x = u;
+        cmd_vel.angular.z = r;
+        this->cmdVelPub.publish(cmd_vel);
 
     }
 
