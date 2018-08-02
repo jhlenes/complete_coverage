@@ -156,7 +156,7 @@ namespace otter_coverage {
         for (int i = 0; i * grid.info.resolution < TILE_RESOLUTION; i++) {
             for (int j = 0; j * grid.info.resolution < TILE_RESOLUTION; j++) {
                 int gridIndex = (gridY+j)*grid.info.width+(gridX+i);
-                if (grid.data[gridIndex] > 10) {
+                if (grid.data[gridIndex] > 50) {
                     return false;
                 }
             }

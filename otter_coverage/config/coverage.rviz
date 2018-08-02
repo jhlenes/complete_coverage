@@ -164,6 +164,14 @@ Visualization Manager:
       Topic: /covered_path
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /trajectory_node_list
+      Name: MarkerArray
+      Namespaces:
+        Trajectory 0: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
