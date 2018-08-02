@@ -264,8 +264,16 @@ namespace otter_coverage {
                 hasGoal = true;
                 newGoal = true;
             } else {
-                ROS_WARN_STREAM("Finished!");
-                return;
+                if (tileX != ORIGIN_X || tileY != ORIGIN_Y) {
+                    ROS_WARN_STREAM("Done! Going back to start...");
+                    goalX = ORIGIN_X;
+                    goalY = ORIGIN_Y;
+                    hasGoal = true;
+                    newGoal = true;
+                } else {
+                    ROS_WARN_STREAM("Finished!");
+                    return;
+                }
             }
 
         }
