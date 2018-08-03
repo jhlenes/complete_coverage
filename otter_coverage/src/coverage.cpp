@@ -91,23 +91,37 @@ namespace otter_coverage {
         int tileX = std::floor(m_pose.x / TILE_RESOLUTION) + ORIGIN_X;
         int tileY = std::floor(m_pose.y / TILE_RESOLUTION) + ORIGIN_Y;
 
-        static Goal goal = {false, false, tileX, tileY};
+        // TODO: Another data structure?
+        if (tileX < 0 || tileX > TILE_SIZE - 1 || tileY < 0 || tileY > TILE_SIZE - 1) {
+            ROS_WARN_STREAM("Tile map is too small (0 - " << TILE_SIZE << "). x: " << tileX << " y: " << tileY);
+        }
+
+        static Goal goal = {true, true, tileX, tileY};
+
+        // add starting point
+        static bool initialized = false;
+        if (!initialized) {
+            publishGoal(tileY, tileX, goal);
+            initialized = true;
+        }
 
         // we want to go back to the start once we are finished
         static const int startX = tileX;
         static const int startY = tileY;
+        static bool finished = false;
 
-        // once the goal is reached, prepare for next goal
-        if (goal.x == tileX && goal.y == tileY) {
-            goal.exists = false;
-            M[tileX][tileY] = COVERED;
-        }
+        checkGoal(tileX, tileY, goal);
 
         // check to find the first available direction in the priority of north-south-east-west.
         checkDirection(1, 0, tileX, tileY, goal);
         checkDirection(-1, 0, tileX, tileY, goal);
         checkDirection(0, -1, tileX, tileY, goal);
         checkDirection(0, 1, tileX, tileY, goal);
+
+        // a new goal has been given manually
+        if (finished && goal.isNew) {
+            finished = false;
+        }
 
         // if all directions are blocked, then the critical point has been reached
         if (!goal.exists) {
@@ -116,18 +130,15 @@ namespace otter_coverage {
                 goal.exists = true;
                 goal.isNew = true;
             } else {
-                if (tileX != startX || tileY != startY) {
-                    ROS_INFO("Done! Going back to start...");
+                if (!finished) {
+                    ROS_INFO("Finished! Going back to start...");
                     goal.x = startX;
                     goal.y = startY;
                     goal.exists = true;
                     goal.isNew = true;
-                } else {
-                    ROS_INFO("Finished!");
-                    return;
+                    finished = true;
                 }
             }
-
         }
 
         if (goal.isNew) {
@@ -135,6 +146,19 @@ namespace otter_coverage {
             publishGoal(tileY, tileX, goal);
         }
 
+    }
+
+    void Coverage::checkGoal(int tileX, int tileY, Goal &goal)
+    {
+        // check if the robot is within a circle of acceptance with radius GOAL_TOLERANCE
+        if (goal.exists) {
+            geometry_msgs::PoseStamped goalPose = m_coveredPath.poses[m_coveredPath.poses.size() - 1];
+            if (std::sqrt(std::pow(goalPose.pose.position.x - m_pose.x, 2) + std::pow(goalPose.pose.position.y - m_pose.y, 2)) < GOAL_TOLERANCE) {
+                goal.exists = false;
+                goal.isNew = false;
+                M[tileX][tileY] = COVERED;
+            }
+        }
     }
 
     bool Coverage::isBacktrackingPoint(int i, int j) {
@@ -200,10 +224,21 @@ namespace otter_coverage {
             }
         }
 
+        // no free points, check whole map
+        for (int i = 1; i < TILE_SIZE-1; i++) {
+            for (int j = 1; j < TILE_SIZE-1; j++) {
+                if (isFree(i, j, false)) {
+                    goalX = i;
+                    goalY = j;
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
-    bool Coverage::isFree(int xTile, int yTile) {
+    bool Coverage::isFree(int xTile, int yTile, bool allowUnknown) {
 
         // a tile contains many grid cells, need to check if all are free
 
@@ -220,7 +255,12 @@ namespace otter_coverage {
             for (int j = 0; j * m_grid.info.resolution < TILE_RESOLUTION; j++) {
                 int gridIndex = (gridY+j)*m_grid.info.width+(gridX+i);
                 if (m_grid.data[gridIndex] > 50) {
-                    return false;
+                    if (allowUnknown) {
+                        return false;
+                    } else if (m_grid.data[gridIndex] < 0) {
+                        return false;
+                    }
+
                 }
             }
         }
@@ -230,13 +270,14 @@ namespace otter_coverage {
 
     void Coverage::checkDirection(int xOffset, int yOffset, int tileX, int tileY, Goal &goal) {
         if (M[tileX + xOffset][tileY + yOffset] != COVERED) {
-            if (isFree(tileX + xOffset, tileY + yOffset)) {
+            if (isFree(tileX + xOffset, tileY + yOffset, true)) {
 
                 M[tileX + xOffset][tileY + yOffset] = FREE;
 
                 if (!goal.exists) {
-                    goal.x += xOffset;
-                    goal.y += yOffset;
+                    ROS_INFO_STREAM("Moving to +x: " << xOffset << " +y: " << yOffset);
+                    goal.x = tileX + xOffset;
+                    goal.y = tileY + yOffset;
                     goal.exists = true;
                     goal.isNew = true;
                 }
