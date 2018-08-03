@@ -17,7 +17,7 @@ namespace otter_coverage {
         ros::NodeHandle nh;
 
         // subscribe to the occupancy grid map
-        ros::Subscriber sub = nh.subscribe("map", 1000, &Coverage::mapCallback, this);
+        ros::Subscriber sub = nh.subscribe("inflated_map", 1000, &Coverage::mapCallback, this);
 
         // create publishers for setting the next waypoint and showing the covered path
         this->goalPub = nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);

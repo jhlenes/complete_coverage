@@ -4,7 +4,6 @@
 #include <ros/ros.h>
 #include <nav_msgs/OccupancyGrid.h>
 
-#include <map>
 #include <vector>
 
 namespace otter_coverage {
@@ -31,7 +30,7 @@ namespace otter_coverage {
 
     class MapProcessor {
 
-        const double INFLATED_RADIUS = 0.25;
+        const double INFLATED_RADIUS = 0.5;
 
         public:
             MapProcessor();
@@ -39,9 +38,9 @@ namespace otter_coverage {
         private:
             void processMap(const nav_msgs::OccupancyGrid &grid);
             inline void enqueue(unsigned int index, unsigned int mx, unsigned int my,
-                                                unsigned int src_x, unsigned int src_y, bool seen[]);
+                                                unsigned int src_x, unsigned int src_y, bool seen[], double resolution);
 
-            std::map<double, std::vector<CellData> > inflation_cells_;
+            std::vector<CellData> inflation_cells_;
             ros::Publisher publisher;
     };
 
