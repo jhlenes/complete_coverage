@@ -26,37 +26,47 @@ namespace otter_coverage {
             Coverage();
             ~Coverage();
 
-        private:
-            void mapCallback(const nav_msgs::OccupancyGrid &grid);
-            void mainLoop(ros::NodeHandle nh);
-            bool updatePose(const tf2_ros::Buffer &tfBuffer);
-            void BM();
-            bool isFree(int xTile, int yTile);
-            bool locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX, int tileY);
-            bool isBacktrackingPoint(int i, int j);
-
-            bool m_mapInitialized;
-
-            ros::Publisher goalPub;
-            ros::Publisher coveredPathPub;
-
-            nav_msgs::Path coveredPath;
-            nav_msgs::OccupancyGrid grid;
-
+    private:
             struct pose {
                 double x;
                 double y;
                 double psi;
             };
 
-            pose m_pose;
+            struct Goal {
+                bool exists;
+                bool isNew;
+                int x;
+                int y;
+            };
 
             struct tile {
                 int x;
                 int y;
             };
 
+            bool m_mapInitialized;
+
+            ros::Publisher m_goalPub;
+            ros::Publisher m_pathPub;
+
+            nav_msgs::Path m_coveredPath;
+            nav_msgs::OccupancyGrid m_grid;
+
+            pose m_pose;
+
             int M[TILE_SIZE][TILE_SIZE] = {};
+
+            void mapCallback(const nav_msgs::OccupancyGrid &m_grid);
+            void mainLoop(ros::NodeHandle nh);
+            bool updatePose(const tf2_ros::Buffer &tfBuffer);
+            void boustrophedonMotion();
+            void checkDirection(int xOffset, int yOffset, int tileX, int tileY, Goal &goal);
+            bool isFree(int xTile, int yTile);
+            bool locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX, int tileY);
+            bool isBacktrackingPoint(int i, int j);
+            void publishGoal(int tileY, int tileX, Goal goal);
+
     };
 
 }

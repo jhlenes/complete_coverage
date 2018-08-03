@@ -16,12 +16,10 @@ namespace otter_coverage {
 
         ros::NodeHandle nh;
 
-        // subscribe to the occupancy grid map
         ros::Subscriber sub = nh.subscribe("inflated_map", 1000, &Coverage::mapCallback, this);
 
-        // create publishers for setting the next waypoint and showing the covered path
-        this->goalPub = nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
-        this->coveredPathPub = nh.advertise<nav_msgs::Path>("covered_path", 1000);
+        m_goalPub = nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
+        m_pathPub = nh.advertise<nav_msgs::Path>("covered_path", 1000);
 
         mainLoop(nh);
     }
@@ -31,9 +29,10 @@ namespace otter_coverage {
     }
 
     void Coverage::mapCallback(const nav_msgs::OccupancyGrid &grid) {
-        this->m_mapInitialized = true;
-        this->grid = grid;
-        return;
+        if (!m_mapInitialized) {
+            m_mapInitialized = true;
+        }
+        m_grid = grid;
     }
 
     void Coverage::mainLoop(ros::NodeHandle nh)
@@ -50,16 +49,20 @@ namespace otter_coverage {
                 continue;
             }
 
-            BM();
+            boustrophedonMotion();
 
             ros::spinOnce();
             rate.sleep();
         }
     }
 
+    /**
+     * @brief Coverage::updatePose Updates the pose of the robot in the map frame.
+     * @param tfBuffer
+     * @return true - if a transform from map to base_link was found.
+     */
     bool Coverage::updatePose(const tf2_ros::Buffer &tfBuffer) {
 
-        // get the pose of the robot in the map frame
         geometry_msgs::TransformStamped transformStamped;
         try{
             transformStamped = tfBuffer.lookupTransform("map", "base_link", ros::Time(0.0), ros::Duration(1.0));
@@ -68,31 +71,91 @@ namespace otter_coverage {
             return false;
         }
 
-        this->m_pose.x = transformStamped.transform.translation.x;
-        this->m_pose.y = transformStamped.transform.translation.y;
+        m_pose.x = transformStamped.transform.translation.x;
+        m_pose.y = transformStamped.transform.translation.y;
         tf::Quaternion q(transformStamped.transform.rotation.x, transformStamped.transform.rotation.y,
                          transformStamped.transform.rotation.z, transformStamped.transform.rotation.w);
-        this->m_pose.psi = tf::getYaw(q);
+        m_pose.psi = tf::getYaw(q);
 
         return true;
     }
 
+    void Coverage::boustrophedonMotion() {
+
+        // we need to wait until we have a map
+        if (!m_mapInitialized) {
+            return;
+        }
+
+        // find tile where robot is located
+        int tileX = std::floor(m_pose.x / TILE_RESOLUTION) + ORIGIN_X;
+        int tileY = std::floor(m_pose.y / TILE_RESOLUTION) + ORIGIN_Y;
+
+        static Goal goal = {false, false, tileX, tileY};
+
+        // we want to go back to the start once we are finished
+        static const int startX = tileX;
+        static const int startY = tileY;
+
+        // once the goal is reached, prepare for next goal
+        if (goal.x == tileX && goal.y == tileY) {
+            goal.exists = false;
+            M[tileX][tileY] = COVERED;
+        }
+
+        // check to find the first available direction in the priority of north-south-east-west.
+        checkDirection(1, 0, tileX, tileY, goal);
+        checkDirection(-1, 0, tileX, tileY, goal);
+        checkDirection(0, -1, tileX, tileY, goal);
+        checkDirection(0, 1, tileX, tileY, goal);
+
+        // if all directions are blocked, then the critical point has been reached
+        if (!goal.exists) {
+            if (locateBestBacktrackingPoint(goal.x, goal.y, tileX, tileY)) {
+                ROS_INFO("Critical point! Backtracking...");
+                goal.exists = true;
+                goal.isNew = true;
+            } else {
+                if (tileX != startX || tileY != startY) {
+                    ROS_INFO("Done! Going back to start...");
+                    goal.x = startX;
+                    goal.y = startY;
+                    goal.exists = true;
+                    goal.isNew = true;
+                } else {
+                    ROS_INFO("Finished!");
+                    return;
+                }
+            }
+
+        }
+
+        if (goal.isNew) {
+            goal.isNew = false;
+            publishGoal(tileY, tileX, goal);
+        }
+
+    }
+
     bool Coverage::isBacktrackingPoint(int i, int j) {
+
         // b(s1,s8) or b(s1,s2)
-        bool eastFree = M[i][j-1] == FREE && (M[i+1][j-1] >= COVERED || M[i-1][j-1] >= COVERED);
+        bool eastBP = M[i][j-1] == FREE && (M[i+1][j-1] == BLOCKED || M[i-1][j-1] == BLOCKED);
 
         // b(s5,s6) or b(s5,s4)
-        bool westFree = M[i][j+1] == FREE && (M[i+1][j+1] >= COVERED || M[i-1][j+1] >= COVERED);
+        bool westBP = M[i][j+1] == FREE && (M[i+1][j+1] == BLOCKED || M[i-1][j+1] == BLOCKED);
 
         // b(s7,s6) or b(s7,s8)
-        bool southFree = M[i-1][j] == FREE && (M[i-1][j+1] >= COVERED || M[i-1][j-1] >= COVERED);
+        bool southBP = M[i-1][j] == FREE && (M[i-1][j+1] == BLOCKED || M[i-1][j-1] == BLOCKED);
 
-        return eastFree || westFree || southFree;
+        // Note: north can not be a BP because of the north-south-east-west check priority.
+
+        return eastBP || westBP || southBP;
     }
 
     bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX, int tileY) {
 
-        std::vector<tile> BP;
+        std::vector<tile> BPs;
         int closestPoint = 0;
         double minDistance = -1.0;
 
@@ -103,26 +166,27 @@ namespace otter_coverage {
                 }
                 if (isBacktrackingPoint(i, j)) {
                     tile point = {i, j};
-                    BP.push_back(point);
+                    BPs.push_back(point);
 
+                    // check if closest point
                     double dist = std::sqrt(std::pow(i - tileX, 2) + std::pow(j - tileY, 2));
                     if (dist < minDistance || minDistance < 0) {
-                        closestPoint = BP.size() - 1;
+                        closestPoint = BPs.size() - 1;
                         minDistance = dist;
                     }
                 }
             }
         }
 
-        // find the nearest point. TODO: change to shortest path on covered tiles instead of euclidean distance
-        if (BP.size() > 0) {
-            tile best = BP.at(closestPoint);
+        // find the nearest point
+        if (BPs.size() > 0) {
+            tile best = BPs.at(closestPoint);
             goalX = best.x;
             goalY = best.y;
             return true;
         }
 
-        // no backtracking point, find any free point
+        // no good backtracking point found, find any free point instead
         for (int i = 1; i < TILE_SIZE-1; i++) {
             for (int j = 1; j < TILE_SIZE-1; j++) {
                 if (M[i][j] != COVERED) {
@@ -131,7 +195,6 @@ namespace otter_coverage {
                 if (M[i][j-1] == FREE || M[i][j+1] == FREE || M[i-1][j] == FREE) {
                     goalX = i;
                     goalY = j;
-                    ROS_WARN_STREAM("Found free tile!");
                     return true;
                 }
             }
@@ -142,21 +205,21 @@ namespace otter_coverage {
 
     bool Coverage::isFree(int xTile, int yTile) {
 
-        if (grid.info.resolution == 0) return false;
+        // a tile contains many grid cells, need to check if all are free
 
-        // Find start position of tile
+        // find position of tile in map frame
         double xPos = (xTile - ORIGIN_X) * TILE_RESOLUTION;
         double yPos = (yTile - ORIGIN_Y) * TILE_RESOLUTION;
 
-        // Find occupancy grid position of tile
-        int gridX = (xPos - grid.info.origin.position.x) / grid.info.resolution;
-        int gridY = (yPos - grid.info.origin.position.y) / grid.info.resolution;
+        // use map frame position to find corner grid cell in the tile
+        int gridX = (xPos - m_grid.info.origin.position.x) / m_grid.info.resolution;
+        int gridY = (yPos - m_grid.info.origin.position.y) / m_grid.info.resolution;
 
-        // Check if all grid cells in the tile are free
-        for (int i = 0; i * grid.info.resolution < TILE_RESOLUTION; i++) {
-            for (int j = 0; j * grid.info.resolution < TILE_RESOLUTION; j++) {
-                int gridIndex = (gridY+j)*grid.info.width+(gridX+i);
-                if (grid.data[gridIndex] > 50) {
+        // iterate through all grid cells in the tile, starting from the corner grid cell
+        for (int i = 0; i * m_grid.info.resolution < TILE_RESOLUTION; i++) {
+            for (int j = 0; j * m_grid.info.resolution < TILE_RESOLUTION; j++) {
+                int gridIndex = (gridY+j)*m_grid.info.width+(gridX+i);
+                if (m_grid.data[gridIndex] > 50) {
                     return false;
                 }
             }
@@ -165,150 +228,52 @@ namespace otter_coverage {
         return true;
     }
 
-    void Coverage::BM() {
-        /*
-        Inputs: The robot’s configuration and the model M of the workspace
+    void Coverage::checkDirection(int xOffset, int yOffset, int tileX, int tileY, Goal &goal) {
+        if (M[tileX + xOffset][tileY + yOffset] != COVERED) {
+            if (isFree(tileX + xOffset, tileY + yOffset)) {
 
-        Outputs: Updated version of the robot’s configuration and the model M of the workspace
+                M[tileX + xOffset][tileY + yOffset] = FREE;
 
-        Step 1. Check to find the first available direction in the
-        priority of north-south-east-west. If all directions are
-        blocked, then the critical point has been reached. Break the
-        loop.
-
-        Step 2. Move one step along this direction.
-
-        Step 3. Generate the tile s = (x, y, 2r), i.e., the size of the robot’s diameter at the robot’s position.
-
-        Step 4. Add the tile s to the mode M. Go to Step 1.
-        */
-
-        if (!m_mapInitialized) {
-            return;
-        }
-
-        // Find tile where robot is located
-        int tileX = std::floor(m_pose.x / TILE_RESOLUTION) + ORIGIN_X;
-        int tileY = std::floor(m_pose.y / TILE_RESOLUTION) + ORIGIN_Y;
-
-        static bool hasGoal = false;
-        static bool newGoal = false;
-        static int goalX = tileX;
-        static int goalY = tileY;
-
-        if (goalX == tileX && goalY == tileY) {
-            hasGoal = false;
-            M[tileX][tileY] = COVERED;
-        }
-
-        // check if next tile is free for obstacles and not covered already
-        if (M[tileX+1][tileY] != COVERED) {
-            if (isFree(tileX+1, tileY)) {
-                if (!hasGoal) {
-                    ROS_WARN_STREAM("Moving to north tile!");
-                    goalX++;
-                    hasGoal = true;
-                    newGoal = true;
-                } else {
-                    M[tileX+1][tileY] = FREE;
+                if (!goal.exists) {
+                    goal.x += xOffset;
+                    goal.y += yOffset;
+                    goal.exists = true;
+                    goal.isNew = true;
                 }
             } else {
-                M[tileX+1][tileY] = BLOCKED;
+                M[tileX + xOffset][tileY + yOffset] = BLOCKED;
             }
         }
-        if (M[tileX-1][tileY] != COVERED) {
-            if (isFree(tileX-1, tileY)) {
-                if (!hasGoal) {
-                    ROS_WARN_STREAM("Moving to south tile!");
-                    goalX--;
-                    hasGoal = true;
-                    newGoal = true;
-                } else {
-                    M[tileX-1][tileY] = FREE;
-                }
-            } else {
-                M[tileX-1][tileY] = BLOCKED;
-            }
-        }
-        if (M[tileX][tileY-1] != COVERED) {
-            if (isFree(tileX, tileY-1)) {
-                if (!hasGoal) {
-                    ROS_WARN_STREAM("Moving to east tile!");
-                    goalY--;
-                    hasGoal = true;
-                    newGoal = true;
-                } else {
-                    M[tileX][tileY-1] = FREE;
-                }
-            } else {
-                M[tileX][tileY-1] = BLOCKED;
-            }
-        }
-        if (M[tileX][tileY+1] != COVERED) {
-            if (isFree(tileX, tileY+1)) {
-                if (!hasGoal) {
-                    ROS_WARN_STREAM("Moving to west tile!");
-                    goalY++;
-                    hasGoal = true;
-                    newGoal = true;
-                } else {
-                    M[tileX][tileY+1] = FREE;
-                }
-            } else {
-                M[tileX][tileY+1] = BLOCKED;
-            }
-        }
-        if (!hasGoal) {
-            if (locateBestBacktrackingPoint(goalX, goalY, tileX, tileY)) {
-                ROS_WARN_STREAM("Critical point! Backtracking...");
-                hasGoal = true;
-                newGoal = true;
-            } else {
-                if (tileX != ORIGIN_X || tileY != ORIGIN_Y) {
-                    ROS_WARN_STREAM("Done! Going back to start...");
-                    goalX = ORIGIN_X;
-                    goalY = ORIGIN_Y;
-                    hasGoal = true;
-                    newGoal = true;
-                } else {
-                    ROS_WARN_STREAM("Finished!");
-                    return;
-                }
-            }
+    }
 
-        }
+    void Coverage::publishGoal(int tileY, int tileX, Goal goal)
+    {
+        geometry_msgs::PoseStamped goalPose;
 
-        if (!newGoal) {
-            return;
-        }
-        newGoal = false;
+        goalPose.header.stamp = ros::Time::now();
+        goalPose.header.frame_id = "map";
 
-        // publish goal tile and covered path
-        geometry_msgs::PoseStamped goal;
+        // set goal to middle of tile
+        goalPose.pose.position.x = (goal.x + 0.5 - ORIGIN_X) * TILE_RESOLUTION;
+        goalPose.pose.position.y = (goal.y + 0.5 - ORIGIN_Y) * TILE_RESOLUTION;
+        goalPose.pose.position.z = 0.0;
 
-        goal.header.stamp = ros::Time::now();
-        goal.header.frame_id = "map";
-        goal.pose.position.x = (goalX + 0.5 - ORIGIN_X) * TILE_RESOLUTION;
-        goal.pose.position.y = (goalY + 0.5 - ORIGIN_Y) * TILE_RESOLUTION;
-        goal.pose.position.z = 0.0;
-
-        double psi = std::atan2(goalY-tileY, goalX-tileX);
+        double psi = std::atan2(goal.y-tileY, goal.x-tileX);
         tf::Quaternion q = tf::createQuaternionFromYaw(psi);
 
-        goal.pose.orientation.x = q.x();
-        goal.pose.orientation.y = q.y();
-        goal.pose.orientation.z = q.z();
-        goal.pose.orientation.w = q.w();
+        goalPose.pose.orientation.x = q.x();
+        goalPose.pose.orientation.y = q.y();
+        goalPose.pose.orientation.z = q.z();
+        goalPose.pose.orientation.w = q.w();
 
-        this->goalPub.publish(goal);
+        m_goalPub.publish(goalPose);
 
-        coveredPath.header.stamp = ros::Time::now();
-        coveredPath.header.frame_id = "map";
-        coveredPath.poses.push_back(goal);
+        m_coveredPath.header.stamp = ros::Time::now();
+        m_coveredPath.header.frame_id = "map";
+        m_coveredPath.poses.push_back(goalPose);
 
-        this->coveredPathPub.publish(coveredPath);
-
-        return;
+        m_pathPub.publish(m_coveredPath);
     }
+
 
 }
