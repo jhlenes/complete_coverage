@@ -150,27 +150,40 @@ namespace otter_coverage {
 
     void Coverage::checkGoal(int tileX, int tileY, Goal &goal)
     {
-        // check if the robot is within a circle of acceptance with radius GOAL_TOLERANCE
         if (goal.exists) {
+
+            // check if the robot is within a circle of acceptance with radius GOAL_TOLERANCE
             geometry_msgs::PoseStamped goalPose = m_coveredPath.poses[m_coveredPath.poses.size() - 1];
             if (std::sqrt(std::pow(goalPose.pose.position.x - m_pose.x, 2) + std::pow(goalPose.pose.position.y - m_pose.y, 2)) < GOAL_TOLERANCE) {
                 goal.exists = false;
                 goal.isNew = false;
                 M[tileX][tileY] = COVERED;
+
+            // check if goal is blocked
+            } else if (!isFree(goal.x, goal.y, true)) {
+                ROS_INFO("Current waypoint is blocked. Searching for new... ");
+                m_coveredPath.poses.erase(m_coveredPath.poses.end()-1);
+                goal.exists = false;
+                goal.isNew = false;
+                M[tileX][tileY] = BLOCKED;
             }
         }
+
+
     }
 
     bool Coverage::isBacktrackingPoint(int i, int j) {
 
+        // TODO: '== BLOCKED' or '>= COVERED' ?
+
         // b(s1,s8) or b(s1,s2)
-        bool eastBP = M[i][j-1] == FREE && (M[i+1][j-1] == BLOCKED || M[i-1][j-1] == BLOCKED);
+        bool eastBP = M[i][j-1] == FREE && (M[i+1][j-1] >= COVERED || M[i-1][j-1] >= COVERED);
 
         // b(s5,s6) or b(s5,s4)
-        bool westBP = M[i][j+1] == FREE && (M[i+1][j+1] == BLOCKED || M[i-1][j+1] == BLOCKED);
+        bool westBP = M[i][j+1] == FREE && (M[i+1][j+1] >= COVERED || M[i-1][j+1] >= COVERED);
 
         // b(s7,s6) or b(s7,s8)
-        bool southBP = M[i-1][j] == FREE && (M[i-1][j+1] == BLOCKED || M[i-1][j-1] == BLOCKED);
+        bool southBP = M[i-1][j] == FREE && (M[i-1][j+1] >= COVERED || M[i-1][j-1] >= COVERED);
 
         // Note: north can not be a BP because of the north-south-east-west check priority.
 
@@ -224,9 +237,13 @@ namespace otter_coverage {
             }
         }
 
+
         // no free points, check whole map
         for (int i = 1; i < TILE_SIZE-1; i++) {
             for (int j = 1; j < TILE_SIZE-1; j++) {
+                if (M[i][j] == COVERED) {
+                    continue;
+                }
                 if (isFree(i, j, false)) {
                     goalX = i;
                     goalY = j;
@@ -234,6 +251,7 @@ namespace otter_coverage {
                 }
             }
         }
+
 
         return false;
     }
@@ -249,18 +267,22 @@ namespace otter_coverage {
         // use map frame position to find corner grid cell in the tile
         int gridX = (xPos - m_grid.info.origin.position.x) / m_grid.info.resolution;
         int gridY = (yPos - m_grid.info.origin.position.y) / m_grid.info.resolution;
+        if (gridX < 0 || gridY < 0) {
+            return false;
+        }
 
         // iterate through all grid cells in the tile, starting from the corner grid cell
         for (int i = 0; i * m_grid.info.resolution < TILE_RESOLUTION; i++) {
             for (int j = 0; j * m_grid.info.resolution < TILE_RESOLUTION; j++) {
                 int gridIndex = (gridY+j)*m_grid.info.width+(gridX+i);
+                if (gridY+j >= m_grid.info.height || gridX+i >= m_grid.info.width) {
+                    return false;
+                }
+                if (!allowUnknown && m_grid.data[gridIndex] < 0) {
+                    return false;
+                }
                 if (m_grid.data[gridIndex] > 50) {
-                    if (allowUnknown) {
-                        return false;
-                    } else if (m_grid.data[gridIndex] < 0) {
-                        return false;
-                    }
-
+                    return false;
                 }
             }
         }
