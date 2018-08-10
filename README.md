@@ -13,6 +13,12 @@ A Docker image has been created with a complete ROS installation on a Jessie ima
 docker build -t rosapp .
 ```
 
+### Give the docker usergroup permission to use X Server
+```
+xhost +local:docker
+```
+This makes it possible to use GUI applications within the docker image. Use ```root``` instead of ```docker``` if you have not set up a docker usergroup.
+
 ### Run 
 ```
 docker run -it --device="/dev/ttyUSB0" --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix:rw --name ros --env="QT_X11_NO_MITSHM=1" rosapp
