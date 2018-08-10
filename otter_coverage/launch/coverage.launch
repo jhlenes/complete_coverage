@@ -1,9 +1,12 @@
 <launch>
 
     <node name="map_processing_node" pkg="otter_coverage" type="map_processing_node" output="screen">
+        <param name="inflation_radius" value="0.5" />
     </node>
 
     <node name="coverage_node" pkg="otter_coverage" type="coverage_node" output="screen">
+        <param name="tile_resolution" value="1.0" />
+        <param name="goal_tolerance" value="0.5" />
     </node>
 
 </launch>

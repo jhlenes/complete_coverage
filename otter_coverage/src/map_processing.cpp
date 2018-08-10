@@ -7,7 +7,10 @@ namespace otter_coverage {
 
     MapProcessor::MapProcessor() {
 
+        ros::NodeHandle private_nh("~");
         ros::NodeHandle nh;
+
+        m_inflation_radius = private_nh.param("inflation_radius", 0.5);
 
         // subscribe to occupancy grid map from slam node
         ros::Subscriber sub = nh.subscribe("map", 1000, &MapProcessor::processMap, this);
@@ -103,7 +106,7 @@ namespace otter_coverage {
     {
         if (!seen[index]) {
             double distance = std::sqrt(std::pow((double)mx - (double)src_x, 2) + std::pow((double)my - (double)src_y, 2));
-            if (distance*resolution <= INFLATED_RADIUS) {
+            if (distance*resolution <= m_inflation_radius) {
                 // push the cell data onto the inflation list
                 inflation_cells_.push_back(CellData(index, mx, my, src_x, src_y));
             }

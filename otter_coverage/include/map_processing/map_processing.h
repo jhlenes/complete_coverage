@@ -30,18 +30,22 @@ namespace otter_coverage {
 
     class MapProcessor {
 
-        const double INFLATED_RADIUS = 0.5;
 
         public:
             MapProcessor();
             ~MapProcessor();
         private:
+
+            // ROS params
+            double m_inflation_radius;
+
+            std::vector<CellData> inflation_cells_;
+            ros::Publisher publisher;
+
             void processMap(const nav_msgs::OccupancyGrid &grid);
             inline void enqueue(unsigned int index, unsigned int mx, unsigned int my,
                                                 unsigned int src_x, unsigned int src_y, bool seen[], double resolution);
 
-            std::vector<CellData> inflation_cells_;
-            ros::Publisher publisher;
     };
 
 }

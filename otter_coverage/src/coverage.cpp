@@ -14,7 +14,11 @@ namespace otter_coverage {
 
     Coverage::Coverage() {
 
+        ros::NodeHandle private_nh("~");
         ros::NodeHandle nh;
+
+        m_tile_resolution = private_nh.param("tile_resolution", 1.0);
+        m_goal_tolerance = private_nh.param("goal_tolerance", 0.5);
 
         ros::Subscriber sub = nh.subscribe("inflated_map", 1000, &Coverage::mapCallback, this);
 
@@ -88,8 +92,8 @@ namespace otter_coverage {
         }
 
         // find tile where robot is located
-        int tileX = std::floor(m_pose.x / TILE_RESOLUTION) + ORIGIN_X;
-        int tileY = std::floor(m_pose.y / TILE_RESOLUTION) + ORIGIN_Y;
+        int tileX = std::floor(m_pose.x / m_tile_resolution) + ORIGIN_X;
+        int tileY = std::floor(m_pose.y / m_tile_resolution) + ORIGIN_Y;
 
         // TODO: Another data structure?
         if (tileX < 0 || tileX > TILE_SIZE - 1 || tileY < 0 || tileY > TILE_SIZE - 1) {
@@ -110,7 +114,7 @@ namespace otter_coverage {
         static const int startY = tileY;
         static bool finished = false;
 
-        checkGoal(tileX, tileY, goal);
+        checkGoal(goal);
 
         // check to find the first available direction in the priority of north-south-east-west.
         checkDirection(1, 0, tileX, tileY, goal);
@@ -148,16 +152,16 @@ namespace otter_coverage {
 
     }
 
-    void Coverage::checkGoal(int tileX, int tileY, Goal &goal)
+    void Coverage::checkGoal(Goal &goal)
     {
         if (goal.exists) {
 
             // check if the robot is within a circle of acceptance with radius GOAL_TOLERANCE
             geometry_msgs::PoseStamped goalPose = m_coveredPath.poses[m_coveredPath.poses.size() - 1];
-            if (std::sqrt(std::pow(goalPose.pose.position.x - m_pose.x, 2) + std::pow(goalPose.pose.position.y - m_pose.y, 2)) < GOAL_TOLERANCE) {
+            if (std::sqrt(std::pow(goalPose.pose.position.x - m_pose.x, 2) + std::pow(goalPose.pose.position.y - m_pose.y, 2)) < m_goal_tolerance) {
                 goal.exists = false;
                 goal.isNew = false;
-                M[tileX][tileY] = COVERED;
+                M[goal.x][goal.y] = COVERED;
 
             // check if goal is blocked
             } else if (!isFree(goal.x, goal.y, true)) {
@@ -165,7 +169,7 @@ namespace otter_coverage {
                 m_coveredPath.poses.erase(m_coveredPath.poses.end()-1);
                 goal.exists = false;
                 goal.isNew = false;
-                M[tileX][tileY] = BLOCKED;
+                M[goal.x][goal.y] = BLOCKED;
             }
         }
 
@@ -261,8 +265,8 @@ namespace otter_coverage {
         // a tile contains many grid cells, need to check if all are free
 
         // find position of tile in map frame
-        double xPos = (xTile - ORIGIN_X) * TILE_RESOLUTION;
-        double yPos = (yTile - ORIGIN_Y) * TILE_RESOLUTION;
+        double xPos = (xTile - ORIGIN_X) * m_tile_resolution;
+        double yPos = (yTile - ORIGIN_Y) * m_tile_resolution;
 
         // use map frame position to find corner grid cell in the tile
         int gridX = (xPos - m_grid.info.origin.position.x) / m_grid.info.resolution;
@@ -272,8 +276,8 @@ namespace otter_coverage {
         }
 
         // iterate through all grid cells in the tile, starting from the corner grid cell
-        for (int i = 0; i * m_grid.info.resolution < TILE_RESOLUTION; i++) {
-            for (int j = 0; j * m_grid.info.resolution < TILE_RESOLUTION; j++) {
+        for (int i = 0; i * m_grid.info.resolution < m_tile_resolution; i++) {
+            for (int j = 0; j * m_grid.info.resolution < m_tile_resolution; j++) {
                 int gridIndex = (gridY+j)*m_grid.info.width+(gridX+i);
                 if (gridY+j >= m_grid.info.height || gridX+i >= m_grid.info.width) {
                     return false;
@@ -291,6 +295,11 @@ namespace otter_coverage {
     }
 
     void Coverage::checkDirection(int xOffset, int yOffset, int tileX, int tileY, Goal &goal) {
+
+        if (tileX + xOffset >= TILE_SIZE || tileX + xOffset < 0 || tileY + yOffset >= TILE_SIZE || tileY + yOffset < 0) {
+            return;
+        }
+
         if (M[tileX + xOffset][tileY + yOffset] != COVERED) {
             if (isFree(tileX + xOffset, tileY + yOffset, true)) {
 
@@ -317,8 +326,8 @@ namespace otter_coverage {
         goalPose.header.frame_id = "map";
 
         // set goal to middle of tile
-        goalPose.pose.position.x = (goal.x + 0.5 - ORIGIN_X) * TILE_RESOLUTION;
-        goalPose.pose.position.y = (goal.y + 0.5 - ORIGIN_Y) * TILE_RESOLUTION;
+        goalPose.pose.position.x = (goal.x + 0.5 - ORIGIN_X) * m_tile_resolution;
+        goalPose.pose.position.y = (goal.y + 0.5 - ORIGIN_Y) * m_tile_resolution;
         goalPose.pose.position.z = 0.0;
 
         double psi = std::atan2(goal.y-tileY, goal.x-tileX);

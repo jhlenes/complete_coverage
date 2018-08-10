@@ -17,11 +17,8 @@ namespace otter_coverage {
     const int BLOCKED = 3;
 
     const int TILE_SIZE = 100;
-    const int ORIGIN_X = 50;
-    const int ORIGIN_Y = 50;
-    const double TILE_RESOLUTION = 1.5;
-
-    const double GOAL_TOLERANCE = 0.5;
+    const int ORIGIN_X = TILE_SIZE / 2;
+    const int ORIGIN_Y = TILE_SIZE / 2;
 
     class Coverage {
         public:
@@ -29,6 +26,11 @@ namespace otter_coverage {
             ~Coverage();
 
     private:
+
+            // ROS parameters
+            double m_tile_resolution;
+            double m_goal_tolerance;
+
             struct pose {
                 double x;
                 double y;
@@ -59,11 +61,12 @@ namespace otter_coverage {
 
             int M[TILE_SIZE][TILE_SIZE] = {};
 
+
             void mapCallback(const nav_msgs::OccupancyGrid &m_grid);
             void mainLoop(ros::NodeHandle nh);
             bool updatePose(const tf2_ros::Buffer &tfBuffer);
             void boustrophedonMotion();
-            void checkGoal(int tileX, int tileY, Goal &goal);
+            void checkGoal(Goal &goal);
             void checkDirection(int xOffset, int yOffset, int tileX, int tileY, Goal &goal);
             bool isFree(int xTile, int yTile, bool allowUnknown);
             bool locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX, int tileY);

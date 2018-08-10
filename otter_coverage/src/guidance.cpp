@@ -110,8 +110,12 @@ namespace otter_coverage {
         double r = std::min(chi_err, 0.5);
         r = std::max(r, -0.5);
 
+        ROS_INFO_STREAM("chi_err: " << chi_err);
+        ROS_INFO_STREAM("e: " << e);
+
+
         // calculate desired speed
-        double u = 0.4 * (1 - std::abs(e) / 0.5);
+        double u = 0.4 * (1 - std::abs(e) / 0.5 - std::abs(chi_err) / M_PI);
         u = std::max(u, 0.05);
 
         // publish angle and speed
