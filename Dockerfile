@@ -50,4 +50,4 @@ RUN chmod +x setup.bash
 RUN echo "alias ls='ls --color=auto'" >> ~/.bashrc
 RUN echo "alias ll='ls --color=auto -l'" >> ~/.bashrc
 
-# COPY test.bag /root/ros_ws/src/boat_slam/bagfiles/test.bag
+COPY office_map_complete.bag /office_map_complete.bag
