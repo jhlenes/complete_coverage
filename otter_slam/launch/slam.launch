@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <launch>
 
     <arg name="lidar" default="true" />
@@ -8,7 +9,7 @@
 
     <!-- Set up transformations between the 'laser' and 'base_link' frames.
         'laser' is the lidar, 'base_link' is the base of the robot. -->
-    <include file="$(find otter_description)/launch/description.launch" />
+    <include file="$(find otter_description)/launch/description.launch" if="$(arg lidar)" />
 
     <!-- Start the cartographer node. This node does SLAM. -->
     <node name="cartographer_node" pkg="cartographer_ros"
