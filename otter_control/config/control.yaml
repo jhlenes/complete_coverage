@@ -34,3 +34,7 @@ otter_velocity_controller:
       max_velocity           : 4.0   # rad/s
       has_acceleration_limits: true
       max_acceleration       : 25.0 # rad/s^2
+
+front_left_wheel_joint:
+  pid_parameters:
+    p: 150.0
