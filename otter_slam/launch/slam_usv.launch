@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <arg name="rviz" default="true" />
+
+    <!-- Start the cartographer node. This node does SLAM. -->
+    <node name="cartographer_node" pkg="cartographer_ros"
+        type="cartographer_node" args="
+            -configuration_directory $(find otter_slam)/config_usv
+            -configuration_basename otter.lua"
+        output="screen">
+        <remap from="scan" to="planar_lidar_wamv/scan" />
+        <remap from="imu" to="imu/data" />
+        <remap from="fix" to="gps/fix" />
+        <remap from="points2" to="lidar_wamv/points" />
+        <remap from="odom" to="odom" />
+    </node>
+
+    <!-- Visualize SLAM in rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" required="true"
+        args="-d $(find otter_slam)/config/slam.rviz" if="$(arg rviz)" />
+
+</launch>
