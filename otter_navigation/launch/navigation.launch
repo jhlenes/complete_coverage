@@ -4,8 +4,8 @@
     <arg name="lidar" default="true" />
 
     <!-- Start SLAM -->
-    <include file="$(find otter_slam)/launch/slam.launch">
-        <arg name="lidar" value="$(arg lidar)" />
+    <include file="$(find otter_slam)/launch/slam_kingfisher.launch">
+        <!--<arg name="lidar" value="$(arg lidar)" />-->
         <arg name="rviz" value="false" />
     </include>
 
@@ -27,4 +27,9 @@
     <node name="rviz" pkg="rviz" type="rviz" required="true"
         args="-d $(find otter_coverage)/config/coverage.rviz" />
 
+    <!-- Convert Twist messages to Drive messages -->
+    <node pkg="vmrc_gazebo" type="twist2thrust.py" name="twist2thrust" output="screen" args="--keyboard">
+        <remap from="left_cmd" to="left_thrust_cmd"/>
+        <remap from="right_cmd" to="right_thrust_cmd"/>
+    </node>
 </launch>
