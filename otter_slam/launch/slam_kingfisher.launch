@@ -3,13 +3,18 @@
 
     <arg name="rviz" default="true" />
 
+    <node name="laser_filter_node" pkg="otter_slam" type="laser_filter_node">
+        <remap from="scan" to="planar_lidar_kingfisher/scan"/>
+        <remap from="filtered_scan" to="scan"/>
+    </node>
+
     <!-- Start the cartographer node. This node does SLAM. -->
     <node name="cartographer_node" pkg="cartographer_ros"
         type="cartographer_node" args="
             -configuration_directory $(find otter_slam)/config_usv
             -configuration_basename kingfisher.lua"
         output="screen">
-        <remap from="scan" to="planar_lidar_kingfisher/scan" />
+        <remap from="scan" to="scan" />
         <remap from="imu" to="imu/data" />
         <remap from="fix" to="gps/fix" />
         <remap from="odom" to="odom" />
