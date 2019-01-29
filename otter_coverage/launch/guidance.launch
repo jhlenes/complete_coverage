@@ -13,7 +13,7 @@
         type="cartographer_occupancy_grid_node" args="-resolution 0.10" />
 
     <node name="map_processing_node" pkg="otter_coverage" type="map_processing_node" output="screen">
-        <param name="inflation_radius" value="0.2" />
+        <param name="inflation_radius" value="2.0" />
     </node>
 
     <node name="guidance_node" pkg="otter_coverage" type="guidance_node" output="screen">

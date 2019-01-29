@@ -29,5 +29,5 @@ TrajectoryPlannerROS:
   # Trajectory scoring parameters
   meter_scoring: true # Whether the gdist_scale and pdist_scale parameters should assume that goal_distance and path_distance are expressed in units of meters or cells. Cells are assumed by default (false).
   occdist_scale:  0.05 #The weighting for how much the controller should attempt to avoid obstacles. default 0.01
-  pdist_scale: 0.75  #     The weighting for how much the controller should stay close to the path it was given . default 0.6
+  pdist_scale: 1.75  #     The weighting for how much the controller should stay close to the path it was given . default 0.6
   gdist_scale: 1.0 #     The weighting for how much the controller should attempt to reach its local goal, also controls speed  default 0.8

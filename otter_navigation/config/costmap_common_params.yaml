@@ -7,4 +7,4 @@ cost_scaling_factor: 2.58
 
 observation_sources: laser_scan_sensor
 
-laser_scan_sensor: {sensor_frame: laser, data_type: LaserScan, topic: scan, marking: true, clearing: true}
+laser_scan_sensor: {sensor_frame: planar_lidar_kingfisher_link, data_type: LaserScan, topic: planar_lidar_kingfisher/scan, marking: true, clearing: true}

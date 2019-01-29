@@ -5,8 +5,8 @@
     </node>
 
     <node name="coverage_node" pkg="otter_coverage" type="coverage_node" output="screen">
-        <param name="tile_resolution" value="5.0" />
-        <param name="goal_tolerance" value="2.0" />
+        <param name="tile_resolution" value="3" />
+        <param name="goal_tolerance" value="1.5" />
     </node>
 
 </launch>
