@@ -3,7 +3,7 @@
     <arg name="lidar" default="true" />
 
     <!-- Start SLAM -->
-    <include file="$(find otter_slam)/launch/slam_kingfisher.launch">
+    <include file="$(find otter_slam)/launch/kingfisher.launch">
         <!--<arg name="lidar" value="$(arg lidar)" />-->
         <arg name="rviz" value="false" />
     </include>
@@ -11,10 +11,6 @@
     <!-- Create a map from the cartographer submaps -->
     <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
         type="cartographer_occupancy_grid_node" args="-resolution 0.10" />
-
-    <node name="map_processing_node" pkg="otter_coverage" type="map_processing_node" output="screen">
-        <param name="inflation_radius" value="2.0" />
-    </node>
 
     <node name="guidance_node" pkg="otter_coverage" type="guidance_node" output="screen">
     </node>

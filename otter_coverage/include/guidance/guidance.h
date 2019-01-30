@@ -23,10 +23,10 @@ namespace otter_coverage {
             const double PI = std::atan(1.0)*4;
 
             // lookahead distance
-            double DELTA = 0.4;
+            double DELTA = 2.0;
 
             // circle of acceptance
-            double R = 0.4;
+            double R = 1.0;
 
     };
 

@@ -102,21 +102,23 @@ namespace otter_coverage {
 
         // calculate desired yaw rate
         double chi_err = chi_d - psi;
-        if (chi_err > PI) {
-            chi_err -= PI;
-        } else if (chi_err < -PI) {
-            chi_err += PI;
+        while (chi_err > PI) {
+            chi_err -= 2*PI;
         }
-        double r = std::min(chi_err, 0.5);
-        r = std::max(r, -0.5);
+        while (chi_err < -PI) {
+            chi_err += 2*PI;
+        }
+        double r = std::min(chi_err, 1.0);
+        r = std::max(r, -1.0);
 
-        ROS_INFO_STREAM("chi_err: " << chi_err);
-        ROS_INFO_STREAM("e: " << e);
+        ROS_INFO_STREAM("PSI: " << psi);
+        ROS_INFO_STREAM("chi_d: " << chi_d);
+
 
 
         // calculate desired speed
-        double u = 0.4 * (1 - std::abs(e) / 0.5 - std::abs(chi_err) / M_PI);
-        u = std::max(u, 0.05);
+        double u = 0.4 * (1 - std::abs(e) / 5 - std::abs(chi_err) / M_PI);
+        u = std::max(u, 0.1);
 
         // publish angle and speed
         geometry_msgs::Twist cmd_vel;
