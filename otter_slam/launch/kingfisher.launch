@@ -9,7 +9,7 @@
     </node>
 
     <!-- Publish TF tree and create odom from IMU + GPS-->
-    <include file="$(find kingfisher_gazebo)/launch/localization.launch" />
+    <include file="$(find kingfisher_gazebo)/launch/localization_slam.launch" />
 
     <!-- Start the cartographer node. This node does SLAM. -->
     <node name="cartographer_node" pkg="cartographer_ros"

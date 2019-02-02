@@ -8,9 +8,13 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf2
   tf2_ros
+  std_msgs
+  message_generation
 )
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS message_runtime
+)
 
 include_directories(
   include
@@ -33,6 +37,18 @@ add_library(map_processing src/map_processing.cpp)
 target_link_libraries(map_processing ${catkin_LIBRARIES})
 add_executable(map_processing_node src/map_processing_node.cpp)
 target_link_libraries(map_processing_node map_processing)
+
+add_library(simple_dubins_path src/simple_dubins_path.cpp)
+target_link_libraries(simple_dubins_path ${catkin_LIBRARIES})
+add_executable(simple_dubins_path_node src/simple_dubins_path_node.cpp)
+target_link_libraries(simple_dubins_path_node simple_dubins_path)
+
+add_message_files(
+  FILES
+  DubinInput.msg
+)
+
+
 
 ## Add custom (non compiling) targets so other files show up in QT Creator's project view.
 file(GLOB_RECURSE EXTRA_FILES */*)
