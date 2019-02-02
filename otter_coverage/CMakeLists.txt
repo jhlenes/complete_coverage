@@ -10,6 +10,18 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   std_msgs
   message_generation
+  geometry_msgs
+)
+
+add_message_files(
+  FILES
+  DubinInput.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
 )
 
 catkin_package(
@@ -42,13 +54,6 @@ add_library(simple_dubins_path src/simple_dubins_path.cpp)
 target_link_libraries(simple_dubins_path ${catkin_LIBRARIES})
 add_executable(simple_dubins_path_node src/simple_dubins_path_node.cpp)
 target_link_libraries(simple_dubins_path_node simple_dubins_path)
-
-add_message_files(
-  FILES
-  DubinInput.msg
-)
-
-
 
 ## Add custom (non compiling) targets so other files show up in QT Creator's project view.
 file(GLOB_RECURSE EXTRA_FILES */*)

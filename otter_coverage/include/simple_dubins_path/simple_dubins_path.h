@@ -3,6 +3,7 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Path.h>
+#include <otter_coverage/DubinInput.h>
 #include <ros/ros.h>
 
 namespace otter_coverage {
@@ -16,13 +17,27 @@ class SimpleDubinsPath {
                 const geometry_msgs::PoseStamped& goal, nav_msgs::Path& path);
 
  private:
-  void onGoal(const geometry_msgs::PoseStamped& goal);
+  enum Dir { Left = 1, Right = -1 };
 
-  enum TurningDirection { Left = 1, Right = -1 };
+  void onGoal(const geometry_msgs::PoseStamped& goal);
+  void onInput(const otter_coverage::DubinInput& input);
+
+  Dir turningDirection(double x_q, double y_q, double theta_q, double x_n,
+                       double y_n);
+  void turningCenter(double x_q, double y_q, double theta_q, double x_n,
+                     double y_n, double& x_cr, double& y_cr);
+  void tangentLine(double x_n, double y_n, double x_cr, double y_cr,
+                   double& beta1, double& beta2);
+  void tangentPoint(double x_q, double y_q, double x_n, double y_n, double x_cr,
+                    double y_cr, double beta1, double beta2, Dir dir,
+                    double& x_lc, double& y_lc);
+  void generatePath(double x_q, double y_q, double x_n, double y_n, double x_cr,
+                    double y_cr, double x_lc, double y_lc, Dir dir,
+                    const geometry_msgs::PoseStamped& goal,
+                    nav_msgs::Path& path);
 
   double m_turningRadius;
   double m_pathResolution;
-
   ros::Publisher m_pathPub;
 };
 

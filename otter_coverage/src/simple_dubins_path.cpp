@@ -15,8 +15,11 @@ SimpleDubinsPath::SimpleDubinsPath() {
   m_turningRadius = private_nh.param("turning_radius", 1.5);
   m_pathResolution = private_nh.param("path_resolution", 0.05);
 
-  ros::Subscriber sub =
-      nh.subscribe("move_base_simple/goal", 1, &SimpleDubinsPath::onGoal, this);
+  ros::Subscriber inputSub = nh.subscribe("simple_dubins_path/input", 1000,
+                                          &SimpleDubinsPath::onInput, this);
+
+  ros::Subscriber sub = nh.subscribe("simple_dubins_path/goal", 1000,
+                                     &SimpleDubinsPath::onGoal, this);
 
   m_pathPub = nh.advertise<nav_msgs::Path>("simple_dubins_path", 1000);
 
@@ -50,58 +53,46 @@ void SimpleDubinsPath::onGoal(const geometry_msgs::PoseStamped& goal) {
   }
 }
 
-bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
-                                const geometry_msgs::PoseStamped& goal,
-                                nav_msgs::Path& path) {
-  // Initial configuration
-  double x_q = start.pose.position.x;
-  double y_q = start.pose.position.y;
-  double theta_q = tf::getYaw(start.pose.orientation);
+void SimpleDubinsPath::onInput(const otter_coverage::DubinInput& input) {
+  nav_msgs::Path path;
+  makePath(input.start, input.end, path);
+  m_pathPub.publish(path);
+}
 
-  // Target position
-  double x_n = goal.pose.position.x;
-  double y_n = goal.pose.position.y;
-
-  // Find turning direction
-  TurningDirection turningDirection = Right;
+SimpleDubinsPath::Dir SimpleDubinsPath::turningDirection(double x_q, double y_q,
+                                                         double theta_q,
+                                                         double x_n,
+                                                         double y_n) {
+  Dir turningDirection = Right;
   if (-(x_n - x_q) * sin(theta_q) + (y_n - y_q) * cos(theta_q) > 0) {
     turningDirection = Left;
   }
-  ROS_INFO_STREAM(
-      "Turning direction: " << ((turningDirection == Left) ? "Left" : "Right"));
+  return turningDirection;
+}
 
-  // Find the center of the turning circle
+void SimpleDubinsPath::turningCenter(double x_q, double y_q, double theta_q,
+                                     double x_n, double y_n, double& x_cr,
+                                     double& y_cr) {
   double x_cr1 = x_q + sin(theta_q) * m_turningRadius;
   double y_cr1 = y_q - cos(theta_q) * m_turningRadius;
   double x_cr2 = x_q - sin(theta_q) * m_turningRadius;
   double y_cr2 = y_q + cos(theta_q) * m_turningRadius;
 
-  double x_cr = x_cr2;
-  double y_cr = y_cr2;
+  x_cr = x_cr2;
+  y_cr = y_cr2;
   if (std::pow(x_n - x_cr1, 2) + std::pow(y_n - y_cr1, 2) <
       std::pow(x_n - x_cr2, 2) + std::pow(y_n - y_cr2, 2)) {
     x_cr = x_cr1;
     y_cr = y_cr1;
   }
+}
 
-  // Check
-  if (m_turningRadius >
-      std::sqrt(std::pow(x_q - x_n, 2) + std::pow(y_q - y_n, 2)) / 2) {
-    ROS_WARN(
-        "The desired turning radius is larger than half the length "
-        "between the waypoint.");
-  }
-  if (std::sqrt(std::pow(x_n - x_cr, 2) + std::pow(y_n - y_cr, 2)) <
-      m_turningRadius) {
-    ROS_ERROR("Target not reachable with simple Dubin's path.");
-    return false;
-  }
-
-  // Find angle of tangent line from target to turning circle
+void SimpleDubinsPath::tangentLine(double x_n, double y_n, double x_cr,
+                                   double y_cr, double& beta1, double& beta2) {
   double a = (x_cr - x_n);
   double b = (y_n - y_cr);
-  double beta1 = 0;
-  double beta2 = 0;
+  beta1 = 0;
+  beta2 = 0;
   if (std::abs(b + m_turningRadius) < epsilon) {
     beta1 = 2 * atan((a - std::sqrt((a * a + b * b -
                                      m_turningRadius * m_turningRadius))) /
@@ -124,8 +115,12 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   if (beta2 < 0) {
     beta2 = beta2 + M_PI;
   }
+}
 
-  // Find tangent points
+void SimpleDubinsPath::tangentPoint(double x_q, double y_q, double x_n,
+                                    double y_n, double x_cr, double y_cr,
+                                    double beta1, double beta2, Dir dir,
+                                    double& x_lc, double& y_lc) {
   // Circle-line intersection with circle in origin
   // http://mathworld.wolfram.com/Circle-LineIntersection.html
   double x2 = x_n - x_cr;  // move line to origin
@@ -178,25 +173,29 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   double angle2 = std::atan2(det, dot);
   if (angle2 < 0) angle2 += 2 * M_PI;  // wrap to [0, 2*pi]
 
-  double x_lc = x_lc2;
-  double y_lc = y_lc2;
+  x_lc = x_lc2;
+  y_lc = y_lc2;
   double angle = angle2;
-  if (turningDirection == Left) {
+  if (dir == Left) {
     if (angle1 < angle2) {
       x_lc = x_lc1;
       y_lc = y_lc1;
       angle = angle1;
     }
-  } else if (turningDirection == Right) {
+  } else if (dir == Right) {
     if (angle1 > angle2) {
       x_lc = x_lc1;
       y_lc = y_lc1;
       angle = angle1;
     }
   }
+}
 
-  // Generate path
-
+void SimpleDubinsPath::generatePath(double x_q, double y_q, double x_n,
+                                    double y_n, double x_cr, double y_cr,
+                                    double x_lc, double y_lc, Dir dir,
+                                    const geometry_msgs::PoseStamped& goal,
+                                    nav_msgs::Path& path) {
   path.header.stamp = ros::Time::now();
   path.header.frame_id = "map";
   path.poses.clear();
@@ -207,16 +206,16 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   double stopAngle = std::atan2(y_lc - y_cr, x_lc - x_cr);
   if (stopAngle < 0) stopAngle += 2 * M_PI;  // wrap to [0, 2*pi]
 
-  if (turningDirection == Left && stopAngle < startAngle) {
+  if (dir == Left && stopAngle < startAngle) {
     stopAngle += 2 * M_PI;
-  } else if (turningDirection == Right && stopAngle > startAngle) {
+  } else if (dir == Right && stopAngle > startAngle) {
     stopAngle -= 2 * M_PI;
   }
 
   // generate circle segment
   double angleIncrement = m_pathResolution / m_turningRadius;
   for (double i = startAngle; std::abs(i - stopAngle) > 2 * angleIncrement;
-       i += turningDirection * angleIncrement) {
+       i += dir * angleIncrement) {
     geometry_msgs::PoseStamped point;
     point.header.stamp = ros::Time::now();
     point.header.frame_id = "map";
@@ -225,8 +224,8 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
     path.poses.push_back(point);
   }
 
-  dx = x_n - x_lc;
-  dy = y_n - y_lc;
+  double dx = x_n - x_lc;
+  double dy = y_n - y_lc;
   double dx_norm = dx / std::sqrt(dx * dx + dy * dy);
   double dy_norm = dy / std::sqrt(dx * dx + dy * dy);
 
@@ -243,6 +242,52 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   }
 
   path.poses.push_back(goal);
+}
+
+bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
+                                const geometry_msgs::PoseStamped& goal,
+                                nav_msgs::Path& path) {
+  // Initial configuration
+  double x_q = start.pose.position.x;
+  double y_q = start.pose.position.y;
+  double theta_q = tf::getYaw(start.pose.orientation);
+
+  // Target position
+  double x_n = goal.pose.position.x;
+  double y_n = goal.pose.position.y;
+
+  Dir dir = turningDirection(x_q, y_q, theta_q, x_n, y_n);
+
+  // Find the center of the turning circle
+  double x_cr;
+  double y_cr;
+  turningCenter(x_q, y_q, theta_q, x_n, y_n, x_cr, y_cr);
+
+  // Perform checks
+  if (m_turningRadius >
+      std::sqrt(std::pow(x_q - x_n, 2) + std::pow(y_q - y_n, 2)) / 2) {
+    ROS_WARN(
+        "The desired turning radius is larger than half the length "
+        "between the waypoint.");
+  }
+  if (std::sqrt(std::pow(x_n - x_cr, 2) + std::pow(y_n - y_cr, 2)) <
+      m_turningRadius) {
+    ROS_ERROR("Target not reachable with simple Dubin's path.");
+    return false;
+  }
+
+  // Find angle of tangent line from target to turning circle
+  double beta1;
+  double beta2;
+  tangentLine(x_n, y_n, x_cr, y_cr, beta1, beta2);
+
+  // Find tangent point
+  double x_lc;
+  double y_lc;
+  tangentPoint(x_q, y_q, x_n, y_n, x_cr, y_cr, beta1, beta2, dir, x_lc, y_lc);
+
+  // Generate path
+  generatePath(x_q, y_q, x_n, y_n, x_cr, y_cr, x_lc, y_lc, dir, goal, path);
 
   return true;
 }

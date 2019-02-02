@@ -3,6 +3,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf/tf.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <otter_coverage/DubinInput.h>
 
 #include <queue>
 #include <algorithm>
@@ -24,6 +25,7 @@ namespace otter_coverage {
 
         m_goalPub = nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
         m_pathPub = nh.advertise<nav_msgs::Path>("covered_path", 1000);
+        m_dubinPub = nh.advertise<otter_coverage::DubinInput>("simple_dubins_path/input", 1000);
 
         mainLoop(nh);
     }
@@ -345,6 +347,27 @@ namespace otter_coverage {
         m_coveredPath.poses.push_back(goalPose);
 
         m_pathPub.publish(m_coveredPath);
+
+        geometry_msgs::PoseStamped startPose;
+        startPose.header.stamp = ros::Time::now();
+        startPose.header.frame_id = "map";
+        // set pose to middle of tile
+        startPose.pose.position.x = m_pose.x;//(tileX + 0.5 - ORIGIN_X) * m_tile_resolution;
+        startPose.pose.position.y = m_pose.y;//(tileY + 0.5 - ORIGIN_Y) * m_tile_resolution;
+        startPose.pose.position.z = 0.0;
+
+        q = tf::createQuaternionFromYaw(m_pose.psi);
+        startPose.pose.orientation.x = q.x();
+        startPose.pose.orientation.y = q.y();
+        startPose.pose.orientation.z = q.z();
+        startPose.pose.orientation.w = q.w();
+
+        otter_coverage::DubinInput di;
+        di.header.stamp = ros::Time::now();
+        di.header.frame_id = "map";
+        di.start = startPose;
+        di.end = goalPose;
+        m_dubinPub.publish(di);
     }
 
 

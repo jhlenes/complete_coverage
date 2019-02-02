@@ -53,6 +53,7 @@ namespace otter_coverage {
 
             ros::Publisher m_goalPub;
             ros::Publisher m_pathPub;
+            ros::Publisher m_dubinPub;
 
             nav_msgs::Path m_coveredPath;
             nav_msgs::OccupancyGrid m_grid;
