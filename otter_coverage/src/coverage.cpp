@@ -79,9 +79,7 @@ namespace otter_coverage {
 
         m_pose.x = transformStamped.transform.translation.x;
         m_pose.y = transformStamped.transform.translation.y;
-        tf::Quaternion q(transformStamped.transform.rotation.x, transformStamped.transform.rotation.y,
-                         transformStamped.transform.rotation.z, transformStamped.transform.rotation.w);
-        m_pose.psi = tf::getYaw(q);
+        m_pose.psi = tf::getYaw(transformStamped.transform.rotation);
 
         return true;
     }
