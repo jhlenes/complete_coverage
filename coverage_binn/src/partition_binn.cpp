@@ -84,10 +84,24 @@ void PartitionBinn::drawPartition() {
       marker.scale.x = m_rc * 2;
       marker.scale.y = m_rc * 2;
       marker.scale.z = 0.01;
-      marker.color.r = 0.0f;
-      marker.color.g = 1.0f;
-      marker.color.b = 0.0f;
+
+      if (m_cells[l - 1][k - 1].status == Blocked) {
+        marker.color.r = 1.0f;
+      } else {
+        marker.color.r = 0.0f;
+      }
+      if (m_cells[l - 1][k - 1].status == Free) {
+        marker.color.g = 1.0f;
+      } else {
+        marker.color.g = 0.0f;
+      }
+      if (m_cells[l - 1][k - 1].status == Unknown) {
+        marker.color.b = 1.0f;
+      } else {
+        marker.color.b = 0.0f;
+      }
       marker.color.a = 0.3f;
+
       marker.lifetime = ros::Duration(2.0);
       ma.markers.push_back(marker);
     }
@@ -95,6 +109,28 @@ void PartitionBinn::drawPartition() {
   m_pub.publish(ma);
 }
 
+void PartitionBinn::getNeighbors(int l, int k, double dist,
+                                 std::vector<Point> &neighbors) {
+  int maxCellDistance = std::ceil(dist / (1.74 * m_rc));  // 1.74 >= sqrt(3)
+
+  double x0, y0;
+  gridToWorld(l, k, x0, y0);
+
+  for (int i = -maxCellDistance; i <= maxCellDistance; i++) {
+    for (int j = -maxCellDistance; j <= maxCellDistance; j++) {
+      if (l + i < 1 || l + i > m_m || k + j < 1 || k + j >= m_n[l + i - 1]) {
+        continue;
+      }
+      double x1, y1;
+      gridToWorld(l + i, k + j, x1, y1);
+      if (std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2)) <= dist) {
+        neighbors.push_back({l + i, k + j});
+      }
+    }
+  }
+}
+
+// TODO: consider using costmap_2d from navigation to get smaller maps
 void PartitionBinn::update(const nav_msgs::OccupancyGrid &map, double x,
                            double y) {
   // Update the status of cells based on the map received in a region around the
@@ -106,10 +142,15 @@ void PartitionBinn::update(const nav_msgs::OccupancyGrid &map, double x,
   int l;
   int k;
   worldToGrid(x, y, l, k);
+  ROS_INFO_STREAM("x: " << l << " y: " << k);
 
   // Calculate status for all nearby cells
-  // CellStatus status = calculateStatus(map, l + 1, k);
-  // m_cells[l + 1][k].status = status;
+  std::vector<Point> neighbors;
+  getNeighbors(l, k, m_scanRange, neighbors);
+  ROS_INFO_STREAM("Neighbors: " << neighbors.size());
+  for (auto neighbor : neighbors) {
+    m_cells[neighbor.l - 1][neighbor.k - 1].status = calculateStatus(map, neighbor.l, neighbor.k);
+  }
 }
 
 unsigned int mapIndex(unsigned int x, unsigned int y, unsigned int width) {
@@ -152,7 +193,7 @@ PartitionBinn::CellStatus PartitionBinn::calculateStatus(
       }
 
       // Map not big enough
-      if (xMap + i >= map.info.height || yMap + j >= map.info.width) {
+      if (xMap + i >= map.info.width || yMap + j >= map.info.height) {
         ROS_INFO("Cell unknown");
         return Unknown;
       }
@@ -163,9 +204,9 @@ PartitionBinn::CellStatus PartitionBinn::calculateStatus(
       }
 
       // Any unknown map cell
-      // if (map.data[m] < 0) {
-      //  return Unknown;
-      //}
+      if (map.data[m] < 0) {
+        return Unknown;
+      }
     }
   }
 
@@ -213,7 +254,8 @@ void PartitionBinn::localToGrid(double xc, double yc, int &l, int &k) {
   // Find row
   if (l % 2 == 0) {
     k = static_cast<int>(
-            std::lround((std::max(yc, 0.0)) / (std::sqrt(3.0) * m_rc))) +
+            std::lround((std::max(yc - std::sqrt(3.0) / 2 * m_rc, 0.0)) /
+                        (std::sqrt(3.0) * m_rc))) +
         1;
   } else {  // l % 2 == 1
     k = static_cast<int>(

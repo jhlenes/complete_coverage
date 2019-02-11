@@ -75,7 +75,6 @@ void CoverageBinn::BINN() {
   int l;
   int k;
   m_partition.worldToGrid(m_pose.x, m_pose.y, l, k);
-  //ROS_INFO_STREAM("Row: " << l << " Col: " << k);
 
   // Are we finished?
   // TODO: check for free, uncovered cells

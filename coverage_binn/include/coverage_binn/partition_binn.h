@@ -24,8 +24,6 @@ class PartitionBinn {
 
   void update(const nav_msgs::OccupancyGrid& map, double x, double y);
 
-  CellStatus calculateStatus(const nav_msgs::OccupancyGrid& map, int l, int k);
-
   void gridToWorld(int l, int k, double& xc, double& yc);
 
   void worldToGrid(double xc, double yc, int& l, int& k);
@@ -51,6 +49,15 @@ class PartitionBinn {
    */
   void localToGrid(double xc, double yc, int& l, int& k);
 
+  struct Point {
+    int l;
+    int k;
+  };
+
+  CellStatus calculateStatus(const nav_msgs::OccupancyGrid& map, int l, int k);
+  void getNeighbors(int l, int k, double dist,
+                    std::vector<Point>& neighbors);
+
   ros::NodeHandle m_nh;
   ros::Publisher m_pub;
 
@@ -66,6 +73,8 @@ class PartitionBinn {
 
   int m_m;               // columns
   std::vector<int> m_n;  // rows
+
+  double m_scanRange = 7;  // in meters
 
   std::vector<std::vector<Cell>> m_cells;  // m_cells[column][row]
 };
