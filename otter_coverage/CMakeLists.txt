@@ -54,6 +54,7 @@ add_library(simple_dubins_path src/simple_dubins_path.cpp)
 target_link_libraries(simple_dubins_path ${catkin_LIBRARIES})
 add_executable(simple_dubins_path_node src/simple_dubins_path_node.cpp)
 target_link_libraries(simple_dubins_path_node simple_dubins_path)
+add_dependencies(simple_dubins_path_node otter_coverage_generate_messages_cpp)
 
 ## Add custom (non compiling) targets so other files show up in QT Creator's project view.
 file(GLOB_RECURSE EXTRA_FILES */*)
