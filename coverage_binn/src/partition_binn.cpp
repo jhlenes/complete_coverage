@@ -1,8 +1,14 @@
 #include <coverage_binn/partition_binn.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <cmath>
 
-PartitionBinn::PartitionBinn() : m_initialized(false) {
+PartitionBinn::PartitionBinn() {}
+
+PartitionBinn::PartitionBinn(ros::NodeHandle nh) : m_initialized(false) {
   ROS_INFO("PartitionBinn constructed.");
+
+  m_nh = nh;
+  m_pub = m_nh.advertise<visualization_msgs::MarkerArray>("cell_partition", 1);
 }
 
 void PartitionBinn::initialize(double x0, double y0, double x1, double y1,
@@ -33,12 +39,13 @@ void PartitionBinn::initialize(double x0, double y0, double x1, double y1,
 
   // Find number of rows nl in each column
   std::vector<int> n;
-  for (int l = 0; l < m_m; l++) {
+  for (int l = 1; l <= m_m; l++) {
     if (std::fmod(m_Yw / (std::sqrt(3.0) * rc), 1.0) <= 1.0 / 2.0) {
-      n.push_back(static_cast<int>(std::floor(m_Yw / std::sqrt(3.0) * rc)) + 1);
+      n.push_back(static_cast<int>(std::floor(m_Yw / (std::sqrt(3.0) * rc))) +
+                  1);
     } else if (std::fmod(m_Yw / (std::sqrt(3.0) * rc), 1.0) > 1.0 / 2.0) {
-      n.push_back(static_cast<int>(std::floor(m_Yw / std::sqrt(3.0) * rc)) + 1 +
-                  (l % 2));
+      n.push_back(static_cast<int>(std::floor(m_Yw / (std::sqrt(3.0) * rc))) +
+                  1 + (l % 2));
     }
   }
   m_n = n;
@@ -47,7 +54,7 @@ void PartitionBinn::initialize(double x0, double y0, double x1, double y1,
   std::vector<std::vector<Cell>> cells;
   for (int l = 1; l <= m_m; l++) {
     std::vector<Cell> column;
-    for (int k = 1; k <= m_n[l]; k++) {
+    for (int k = 1; k <= m_n[l - 1]; k++) {
       Cell cell;
       column.push_back(cell);
     }
@@ -56,18 +63,53 @@ void PartitionBinn::initialize(double x0, double y0, double x1, double y1,
   m_cells = cells;
 }
 
-void PartitionBinn::update(const nav_msgs::OccupancyGrid& map, double x,
+void PartitionBinn::drawPartition() {
+  visualization_msgs::MarkerArray ma;
+  int id = 0;
+  for (int l = 1; l <= m_m; l++) {
+    for (int k = 1; k <= m_n[l - 1]; k++) {
+      double x;
+      double y;
+      gridToWorld(l, k, x, y);
+
+      visualization_msgs::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = ros::Time::now();
+      marker.ns = "shapes";
+      marker.id = id++;
+      marker.type = visualization_msgs::Marker::CYLINDER;
+      marker.action = visualization_msgs::Marker::ADD;
+      marker.pose.position.x = x;
+      marker.pose.position.y = y;
+      marker.scale.x = m_rc * 2;
+      marker.scale.y = m_rc * 2;
+      marker.scale.z = 0.01;
+      marker.color.r = 0.0f;
+      marker.color.g = 1.0f;
+      marker.color.b = 0.0f;
+      marker.color.a = 0.3f;
+      marker.lifetime = ros::Duration(2.0);
+      ma.markers.push_back(marker);
+    }
+  }
+  m_pub.publish(ma);
+}
+
+void PartitionBinn::update(const nav_msgs::OccupancyGrid &map, double x,
                            double y) {
   // Update the status of cells based on the map received in a region around the
   // position [x,y]
+
+  drawPartition();
 
   // Current cell
   int l;
   int k;
   worldToGrid(x, y, l, k);
 
-  // For all nearby cells
-  //    isFree()
+  // Calculate status for all nearby cells
+  // CellStatus status = calculateStatus(map, l + 1, k);
+  // m_cells[l + 1][k].status = status;
 }
 
 unsigned int mapIndex(unsigned int x, unsigned int y, unsigned int width) {
@@ -75,7 +117,7 @@ unsigned int mapIndex(unsigned int x, unsigned int y, unsigned int width) {
 }
 
 PartitionBinn::CellStatus PartitionBinn::calculateStatus(
-    const nav_msgs::OccupancyGrid& map, int l, int k) {
+    const nav_msgs::OccupancyGrid &map, int l, int k) {
   /* A cell in the partition contains many cells in the map. All
    * map cells in a partition cell are free => partition cell is free
    */
@@ -111,6 +153,7 @@ PartitionBinn::CellStatus PartitionBinn::calculateStatus(
 
       // Map not big enough
       if (xMap + i >= map.info.height || yMap + j >= map.info.width) {
+        ROS_INFO("Cell unknown");
         return Unknown;
       }
 
@@ -120,16 +163,16 @@ PartitionBinn::CellStatus PartitionBinn::calculateStatus(
       }
 
       // Any unknown map cell
-      if (map.data[m] < 0) {
-        return Unknown;
-      }
+      // if (map.data[m] < 0) {
+      //  return Unknown;
+      //}
     }
   }
 
   return Free;
 }
 
-void PartitionBinn::gridToWorld(int l, int k, double& xc, double& yc) {
+void PartitionBinn::gridToWorld(int l, int k, double &xc, double &yc) {
   double xLocal;
   double yLocal;
   gridToLocal(l, k, xLocal, yLocal);
@@ -137,41 +180,44 @@ void PartitionBinn::gridToWorld(int l, int k, double& xc, double& yc) {
   yc = yLocal + m_y0;
 }
 
-void PartitionBinn::worldToGrid(double xc, double yc, int& l, int& k) {
+void PartitionBinn::worldToGrid(double xc, double yc, int &l, int &k) {
   double xLocal = xc - m_x0;
   double yLocal = yc - m_y0;
   localToGrid(xLocal, yLocal, l, k);
 }
 
-void PartitionBinn::gridToLocal(int l, int k, double& xc, double& yc) {
-  if (l < 1 || l > m_m || k < 0 || k > m_n[l])
+void PartitionBinn::gridToLocal(int l, int k, double &xc, double &yc) {
+  if (l < 1 || l > m_m || k < 0 || k > m_n[l - 1])
     ROS_ERROR("gridToLocal: index out of bounds.");
 
   if (l % 2 == 1) {
-    xc = (3.0 / 2.0 * l - 1) * m_rc;
+    xc = (3.0 / 2.0 * l - 1.0) * m_rc;
     yc = (k - 1.0) * std::sqrt(3) * m_rc;
   } else {  // l % 2 == 0
-    xc = (3.0 / 2.0 * l - 1) * m_rc;
+    xc = (3.0 / 2.0 * l - 1.0) * m_rc;
     yc = (k - 1.0 / 2.0) * std::sqrt(3) * m_rc;
   }
 }
 
-// TODO: debug this further
-void PartitionBinn::localToGrid(double xc, double yc, int& l, int& k) {
+// TODO: Not accurate, circles are treated as squares. Maybe do better.
+void PartitionBinn::localToGrid(double xc, double yc, int &l, int &k) {
   if (xc < 0 || xc > m_Xw || yc < 0 || yc > m_Yw)
     ROS_ERROR("localToGrid: index out of bounds.");
 
   // Find column
-  if (std::fmod(xc / (3.0 / 2.0 * m_rc), 1.0) <= 2.0 / 3.0) {
-    l = static_cast<int>(std::floor(xc / (3.0 / 2.0 * m_rc))) + 1;
-  } else if (std::fmod(xc / (3.0 / 2.0 * m_rc), 1.0) > 2.0 / 3.0) {
-    l = static_cast<int>(std::floor(xc / (3.0 / 2.0 * m_rc))) + 2;
-  }
+
+  l = static_cast<int>(
+          std::lround((std::max(xc - 0.5 * m_rc, 0.0)) / (3.0 / 2.0 * m_rc))) +
+      1;
 
   // Find row
-  if (std::fmod(yc / (std::sqrt(3.0) * m_rc), 1.0) <= 1.0 / 2.0) {
-    k = static_cast<int>(std::floor(yc / std::sqrt(3.0) * m_rc)) + 1;
-  } else if (std::fmod(yc / (std::sqrt(3.0) * m_rc), 1.0) > 1.0 / 2.0) {
-    k = static_cast<int>(std::floor(yc / std::sqrt(3.0) * m_rc)) + 1 + (l % 2);
+  if (l % 2 == 0) {
+    k = static_cast<int>(
+            std::lround((std::max(yc, 0.0)) / (std::sqrt(3.0) * m_rc))) +
+        1;
+  } else {  // l % 2 == 1
+    k = static_cast<int>(
+            std::lround((std::max(yc, 0.0)) / (std::sqrt(3.0) * m_rc))) +
+        1;
   }
 }

@@ -16,8 +16,11 @@ class PartitionBinn {
   };
 
   PartitionBinn();
+  PartitionBinn(ros::NodeHandle nh);
 
   void initialize(double x0, double y0, double x1, double y1, double rc);
+
+  void drawPartition();
 
   void update(const nav_msgs::OccupancyGrid& map, double x, double y);
 
@@ -47,6 +50,9 @@ class PartitionBinn {
    * @param k the row 1<=k<=n[l]
    */
   void localToGrid(double xc, double yc, int& l, int& k);
+
+  ros::NodeHandle m_nh;
+  ros::Publisher m_pub;
 
   bool m_initialized;
 

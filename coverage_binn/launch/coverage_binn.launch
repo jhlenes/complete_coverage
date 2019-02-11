@@ -1,0 +1,25 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <!-- Start SLAM -->
+    <include file="$(find otter_slam)/launch/kingfisher.launch">
+        <arg name="rviz" value="false" />
+    </include>
+
+    <!-- Create a map from the cartographer submaps -->
+    <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+        type="cartographer_occupancy_grid_node" args="-resolution 0.10" />
+
+    <node name="map_processing_node" pkg="otter_coverage" type="map_processing_node" output="screen">
+        <param name="inflation_radius" value="2.0" />
+    </node>
+
+    <node name="coverage_binn_node" pkg="coverage_binn" type="coverage_binn_node" output="screen">
+        
+    </node>
+
+    <!-- Visualize in rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" required="true"
+        args="-d $(find coverage_binn)/cfg/binn.rviz" />
+
+</launch>

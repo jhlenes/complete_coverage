@@ -11,13 +11,13 @@ CoverageBinn::CoverageBinn() : m_mapInitialized(false) {
   ROS_INFO("Starting main loop.");
 
   // Set up partition. TODO: set up with parameters
-  m_partition = PartitionBinn();
-  m_partition.initialize(-20, -20, 20, 20, 1.5);
+  m_partition = PartitionBinn(nh);
+  m_partition.initialize(-15, -10, 15, 10, 1.5);
   ROS_INFO("Starting main loop.");
 
   // Set up subscribers
   ros::Subscriber mapSub =
-      nh.subscribe("coverage_map", 1000, &CoverageBinn::onMapReceived, this);
+      nh.subscribe("inflated_map", 1000, &CoverageBinn::onMapReceived, this);
 
   // Set up publishers
 
@@ -56,7 +56,7 @@ bool CoverageBinn::updateRobotPose(const tf2_ros::Buffer& tfBuffer) {
   geometry_msgs::TransformStamped tfStamped;
   try {
     // TODO: use params for frames
-    tfStamped = tfBuffer.lookupTransform("map", "base_link", ros::Time(0.0));
+    tfStamped = tfBuffer.lookupTransform("map", "base_link", ros::Time(0.0), ros::Duration(0.1));
   } catch (tf2::TransformException& ex) {
     ROS_WARN("%s", ex.what());
     return false;
@@ -75,7 +75,7 @@ void CoverageBinn::BINN() {
   int l;
   int k;
   m_partition.worldToGrid(m_pose.x, m_pose.y, l, k);
-  ROS_INFO_STREAM("Row: " << l << " Col: " << k);
+  //ROS_INFO_STREAM("Row: " << l << " Col: " << k);
 
   // Are we finished?
   // TODO: check for free, uncovered cells
