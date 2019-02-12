@@ -87,33 +87,13 @@ void CoverageBinn::BINN() {
   // TODO: doesn't work with higher deltaTime
   evolveNeuralNetwork(deltaTime / 10.0);
 
-  // Get cell position
-  int l, k;
-  m_partition.worldToGrid(m_pose.x, m_pose.y, l, k);
-
   // Find next position
-  std::vector<PartitionBinn::Point> neighbors;
-  getNeighbors(l, k, neighbors);
-
-  auto cells = m_partition.getCells();
-
-  PartitionBinn::Point best = {l, k};
-  double maxValue = m_partition.getCellValue(l, k);
-
-  for (auto neighbor : neighbors) {
-    double newX = m_partition.getCellValue(neighbor.l, neighbor.k);
-    if (newX > maxValue) {
-      maxValue = newX;
-      best = neighbor;
-    }
-    ROS_INFO_STREAM("x: " << neighbor.l << " y: " << neighbor.k
-                          << " value: " << newX);
-  }
-
-  ROS_INFO_STREAM("Current pos: " << l << ", " << k);
-  ROS_INFO_STREAM("Next pos:    " << best.l << ", " << best.k);
+  double xNext, yNext;
+  findNextPos(xNext, yNext);
 
   // Set current cell as covered
+  int l, k;
+  m_partition.worldToGrid(m_pose.x, m_pose.y, l, k);
   m_partition.setCellCovered(l, k, true);
 }
 
@@ -134,7 +114,7 @@ void CoverageBinn::evolveNeuralNetwork(double deltaTime) {
                     (m_D + x) * std::max(-I, 0.0);
 
       x += xDot * deltaTime;
-      m_partition.setCellValue(l, k, x); // std::max(std::min(x, m_B), m_D)
+      m_partition.setCellValue(l, k, x);  // std::max(std::min(x, m_B), m_D)
     }
   }
 }
@@ -199,4 +179,52 @@ void CoverageBinn::getNeighbors(int l, int k,
     neighbors.push_back({l + 1, k + 2});
     neighbors.push_back({l - 1, k + 2});
   }
+}
+
+void CoverageBinn::findNextPos(double& xNext, double& yNext) {
+  // Get cell position
+  int l, k;
+  m_partition.worldToGrid(m_pose.x, m_pose.y, l, k);
+
+  // Next pos has to be among the neighbors
+  std::vector<PartitionBinn::Point> neighbors;
+  getNeighbors(l, k, neighbors);
+
+  // Consider current cell first
+  PartitionBinn::Point best = {l, k};
+  double maxValue =
+      valueFunction(m_partition.getCellValue(l, k), m_pose.yaw, m_pose.yaw);
+
+  // Find neighbor with highest score
+  for (auto nb : neighbors) {
+    // Curremt cell position
+    double xCurrent, yCurrent;
+    m_partition.gridToWorld(l, k, xCurrent, yCurrent);
+
+    // Get target heading
+    double xTarget, yTarget;
+    m_partition.gridToWorld(nb.l, nb.k, xTarget, yTarget);
+    double targetHeading = m_dubin.getTargetHeading(
+        m_pose.x, m_pose.y, m_pose.yaw, xTarget, yTarget);
+
+    double value = valueFunction(m_partition.getCellValue(nb.l, nb.k),
+                                 m_pose.yaw, targetHeading);
+    if (value > maxValue) {
+      maxValue = value;
+      best = nb;
+    }
+  }
+  ROS_INFO_STREAM("Current pos: " << l << ", " << k);
+  ROS_INFO_STREAM("Next pos:    " << best.l << ", " << best.k);
+  xNext = best.l;
+  yNext = best.k;
+}
+
+double CoverageBinn::valueFunction(double neuralActivity, double yaw,
+                                   double targetYaw) {
+  double diff = std::fabs(targetYaw - yaw);
+  diff = std::fmod(diff, M_PI);
+
+  return (1 - diff / M_PI) * m_lambda * neuralActivity +
+         (1 - m_lambda) * neuralActivity;
 }

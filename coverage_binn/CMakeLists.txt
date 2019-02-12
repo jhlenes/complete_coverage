@@ -196,11 +196,13 @@ include_directories(
 # catkin_add_nosetests(test)
 
 add_executable(coverage_binn_node
-  include/coverage_binn/partition_binn.h
-  src/partition_binn.cpp
-  src/coverage_binn.cpp
   include/coverage_binn/coverage_binn.h
+  include/coverage_binn/partition_binn.h
+  include/simple_dubins_path/simple_dubins_path.h
   src/coverage_binn_node.cpp
+  src/coverage_binn.cpp
+  src/partition_binn.cpp
+  src/simple_dubins_path.cpp  
 )
 add_dependencies(coverage_binn_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(coverage_binn_node

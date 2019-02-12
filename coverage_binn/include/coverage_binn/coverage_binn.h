@@ -4,6 +4,7 @@
 #include <coverage_binn/partition_binn.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <ros/ros.h>
+#include <simple_dubins_path/simple_dubins_path.h>
 #include <tf2_ros/transform_listener.h>
 
 class CoverageBinn {
@@ -20,6 +21,8 @@ class CoverageBinn {
   double calculateWeightSum(int l, int k, double x);
   double calculateWeight(int l0, int k0, int l1, int k1);
   void getNeighbors(int l, int k, std::vector<PartitionBinn::Point>& neighbors);
+  void findNextPos(double& xNext, double& yNext);
+  double valueFunction(double neuralActivity, double yaw, double targetYaw);
 
   struct Pose {
     double x;
@@ -37,6 +40,9 @@ class CoverageBinn {
   double m_D = -0.1;
   double m_E = 100.0;
   double m_mu = 1.0;
+  double m_lambda = 0.1;
+
+  SimpleDubinsPath m_dubin;
 };
 
 #endif
