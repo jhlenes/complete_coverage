@@ -10,11 +10,15 @@ class PartitionBinn {
   enum CellStatus { Unknown, Free, Blocked };
 
   struct Cell {
-    Cell() : isCovered(false), status(Unknown) {}
+    Cell() : isCovered(false), status(Unknown), x(0.0) {}
     bool isCovered;
     CellStatus status;
+    double x;  // neural activity
   };
-
+  struct Point {
+    int l;
+    int k;
+  };
   PartitionBinn();
   PartitionBinn(ros::NodeHandle nh);
 
@@ -27,6 +31,28 @@ class PartitionBinn {
   void gridToWorld(int l, int k, double& xc, double& yc);
 
   void worldToGrid(double xc, double yc, int& l, int& k);
+
+  std::vector<std::vector<Cell>> getCells() { return m_cells; }
+
+  void setCellStatus(int l, int k, CellStatus status) {
+    m_cells[l - 1][k - 1].status = status;
+  }
+
+  CellStatus getCellStatus(int l, int k) {
+    return m_cells[l - 1][k - 1].status;
+  }
+
+  void setCellCovered(int l, int k, bool isCovered) {
+    m_cells[l - 1][k - 1].isCovered = isCovered;
+  }
+
+  bool isCellCovered(int l, int k) { return m_cells[l - 1][k - 1].isCovered; }
+
+  void setCellValue(int l, int k, double x) { m_cells[l - 1][k - 1].x = x; }
+
+  double getCellValue(int l, int k) { return m_cells[l - 1][k - 1].x; }
+
+  void getNeighbors(int l, int k, double dist, std::vector<Point>& neighbors);
 
  private:
   /**
@@ -49,14 +75,7 @@ class PartitionBinn {
    */
   void localToGrid(double xc, double yc, int& l, int& k);
 
-  struct Point {
-    int l;
-    int k;
-  };
-
   CellStatus calculateStatus(const nav_msgs::OccupancyGrid& map, int l, int k);
-  void getNeighbors(int l, int k, double dist,
-                    std::vector<Point>& neighbors);
 
   ros::NodeHandle m_nh;
   ros::Publisher m_pub;
