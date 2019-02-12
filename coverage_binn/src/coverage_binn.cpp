@@ -106,15 +106,15 @@ void CoverageBinn::evolveNeuralNetwork(double deltaTime) {
       double I = calculateI(m_partition.getCellStatus(l, k),
                             m_partition.isCellCovered(l, k));
 
-      double weightSum =
-          calculateWeightSum(l, k, m_partition.getCellValue(l, k));
+      double weightSum = calculateWeightSum(l, k);
 
       double x = m_partition.getCellValue(l, k);
+
       double xDot = -m_A * x + (m_B - x) * (std::max(I, 0.0) + weightSum) -
                     (m_D + x) * std::max(-I, 0.0);
 
       x += xDot * deltaTime;
-      m_partition.setCellValue(l, k, x);  // std::max(std::min(x, m_B), m_D)
+      m_partition.setCellValue(l, k, x);
     }
   }
 }
@@ -133,19 +133,19 @@ double CoverageBinn::calculateI(PartitionBinn::CellStatus status,
   }
 }
 
-double CoverageBinn::calculateWeightSum(int l, int k, double x) {
+double CoverageBinn::calculateWeightSum(int l, int k) {
   std::vector<PartitionBinn::Point> neighbors;
   getNeighbors(l, k, neighbors);
 
   double weightSum = 0.0;
-  for (auto neighbor : neighbors) {
-    if (neighbor.l < 1 || neighbor.l > m_partition.getCells().size() ||
-        neighbor.k < 1 ||
-        neighbor.k > m_partition.getCells()[neighbor.l - 1].size()) {
+  for (auto nb : neighbors) {
+    if (nb.l < 1 || nb.l > m_partition.getCells().size() || nb.k < 1 ||
+        nb.k > m_partition.getCells()[nb.l - 1].size()) {
       continue;
     }
-    weightSum +=
-        calculateWeight(l, k, neighbor.l, neighbor.k) * std::max(x, 0.0);
+
+    weightSum += calculateWeight(l, k, nb.l, nb.k) *
+                 std::max(m_partition.getCellValue(nb.l, nb.k), 0.0);
   }
 
   return weightSum;
@@ -157,6 +157,7 @@ double CoverageBinn::calculateWeight(int l0, int k0, int l1, int k1) {
   m_partition.gridToWorld(l0, k0, x0, y0);
   double x1, y1;
   m_partition.gridToWorld(l1, k1, x1, y1);
+
   return m_mu / std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
 }
 
@@ -192,38 +193,50 @@ void CoverageBinn::findNextPos(double& xNext, double& yNext) {
 
   // Consider current cell first
   PartitionBinn::Point best = {l, k};
-  double maxValue =
-      valueFunction(m_partition.getCellValue(l, k), m_pose.yaw, m_pose.yaw);
+  double maxScore =
+      scoreFunction(m_partition.getCellValue(l, k), m_pose.yaw, m_pose.yaw);
 
   // Find neighbor with highest score
   for (auto nb : neighbors) {
-    // Curremt cell position
+    if (nb.l < 1 || nb.l > m_partition.getCells().size() || nb.k < 1 ||
+        nb.k > m_partition.getCells()[nb.l - 1].size()) {
+      continue;
+    }
+
+    // Current cell position
     double xCurrent, yCurrent;
     m_partition.gridToWorld(l, k, xCurrent, yCurrent);
 
-    // Get target heading
+    // Target position
     double xTarget, yTarget;
     m_partition.gridToWorld(nb.l, nb.k, xTarget, yTarget);
-    double targetHeading = m_dubin.getTargetHeading(
-        m_pose.x, m_pose.y, m_pose.yaw, xTarget, yTarget);
 
-    double value = valueFunction(m_partition.getCellValue(nb.l, nb.k),
-                                 m_pose.yaw, targetHeading);
-    if (value > maxValue) {
-      maxValue = value;
-      best = nb;
+    // Target reachable?
+    double yawTarget;
+    if (m_dubin.getTargetHeading(m_pose.x, m_pose.y, m_pose.yaw, xTarget,
+                                 yTarget, yawTarget)) {
+      // Get the score
+      double score = scoreFunction(m_partition.getCellValue(nb.l, nb.k),
+                                   m_pose.yaw, yawTarget);
+      if (score > maxScore) {
+        maxScore = score;
+        best = nb;
+      }
     }
   }
+
   ROS_INFO_STREAM("Current pos: " << l << ", " << k);
   ROS_INFO_STREAM("Next pos:    " << best.l << ", " << best.k);
   xNext = best.l;
   yNext = best.k;
 }
 
-double CoverageBinn::valueFunction(double neuralActivity, double yaw,
+double CoverageBinn::scoreFunction(double neuralActivity, double yaw,
                                    double targetYaw) {
+  if (yaw < 0) yaw += 2 * M_PI;
+  if (targetYaw < 0) targetYaw += 2 * M_PI;
   double diff = std::fabs(targetYaw - yaw);
-  diff = std::fmod(diff, M_PI);
+  if (diff > M_PI) diff = 2 * M_PI - diff;
 
   return (1 - diff / M_PI) * m_lambda * neuralActivity +
          (1 - m_lambda) * neuralActivity;

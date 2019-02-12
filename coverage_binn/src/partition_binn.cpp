@@ -87,17 +87,21 @@ void PartitionBinn::drawPartition() {
 
       if (m_cells[l - 1][k - 1].status == Blocked) {
         marker.color.r = 1.0f;
-      } else {
-        marker.color.r = 0.0f;
-      }
-      if (m_cells[l - 1][k - 1].status == Free) {
-        marker.color.g = 1.0f;
-      } else {
         marker.color.g = 0.0f;
+        marker.color.b = 0.0f;
+      } else if (m_cells[l - 1][k - 1].status == Free) {
+        marker.color.r = 0.0f;
+        marker.color.g = 1.0f;
+        marker.color.b = 1.0f;
       }
       if (m_cells[l - 1][k - 1].status == Unknown) {
+        marker.color.r = 0.0f;
+        marker.color.g = 0.0f;
         marker.color.b = 1.0f;
-      } else {
+      }
+      if (m_cells[l - 1][k - 1].isCovered) {
+        marker.color.r = 0.0f;
+        marker.color.g = 1.0f;
         marker.color.b = 0.0f;
       }
       marker.color.a = 0.1f;
