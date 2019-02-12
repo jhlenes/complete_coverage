@@ -100,7 +100,7 @@ void PartitionBinn::drawPartition() {
       } else {
         marker.color.b = 0.0f;
       }
-      marker.color.a = 0.3f;
+      marker.color.a = 0.1f;
 
       marker.lifetime = ros::Duration(2.0);
       ma.markers.push_back(marker);
@@ -118,7 +118,7 @@ void PartitionBinn::getNeighbors(int l, int k, double dist,
 
   for (int i = -maxCellDistance; i <= maxCellDistance; i++) {
     for (int j = -maxCellDistance; j <= maxCellDistance; j++) {
-      if (l + i < 1 || l + i > m_m || k + j < 1 || k + j >= m_n[l + i - 1]) {
+      if (l + i < 1 || l + i > m_m || k + j < 1 || k + j > m_n[l + i - 1]) {
         continue;
       }
       double x1, y1;
@@ -142,14 +142,13 @@ void PartitionBinn::update(const nav_msgs::OccupancyGrid &map, double x,
   int l;
   int k;
   worldToGrid(x, y, l, k);
-  ROS_INFO_STREAM("x: " << l << " y: " << k);
 
   // Calculate status for all nearby cells
   std::vector<Point> neighbors;
   getNeighbors(l, k, m_scanRange, neighbors);
-  ROS_INFO_STREAM("Neighbors: " << neighbors.size());
   for (auto neighbor : neighbors) {
-    m_cells[neighbor.l - 1][neighbor.k - 1].status = calculateStatus(map, neighbor.l, neighbor.k);
+    m_cells[neighbor.l - 1][neighbor.k - 1].status =
+        calculateStatus(map, neighbor.l, neighbor.k);
   }
 }
 
@@ -168,34 +167,32 @@ PartitionBinn::CellStatus PartitionBinn::calculateStatus(
   double yWorld;
   gridToWorld(l, k, xWorld, yWorld);
 
-  // Find x and y in map of center of cell
-  unsigned int xMap_c = static_cast<unsigned int>(
-      (xWorld - map.info.origin.position.x) / map.info.resolution);
-  unsigned int yMap_c = static_cast<unsigned int>(
-      (yWorld - map.info.origin.position.y) / map.info.resolution);
-
-  // Find x and y in map of lower left corner of surrounding square
+  // Find x and y in map of lower right corner of surrounding square
   unsigned int xMap = static_cast<unsigned int>(
       ((xWorld - m_rc) - map.info.origin.position.x) / map.info.resolution);
   unsigned int yMap = static_cast<unsigned int>(
       ((yWorld - m_rc) - map.info.origin.position.y) / map.info.resolution);
 
   // Check if all map cells in the partition cell is free
-  for (unsigned int i = 0; i * map.info.resolution < 2 * m_rc; i++) {
-    for (unsigned int j = 0; j * map.info.resolution < 2 * m_rc; j++) {
+  bool unknown = false;
+  double xOrigin = map.info.origin.position.x;
+  double yOrigin = map.info.origin.position.y;
+  double mapRes = map.info.resolution;
+  for (unsigned int i = 0; i * mapRes < 2 * m_rc; i++) {
+    for (unsigned int j = 0; j * mapRes < 2 * m_rc; j++) {
       unsigned int m = mapIndex(xMap + i, yMap + j, map.info.width);
 
       // Map cell not in partition cell (circle shape)
-      if (std::pow((xMap + i - xMap_c) * map.info.resolution, 2) +
-              std::pow((yMap + j - yMap_c) * map.info.resolution, 2) >
-          m_rc * m_rc) {
+      if (std::sqrt(std::pow((xMap + i) * mapRes + xOrigin - xWorld, 2) +
+                    std::pow((yMap + j) * mapRes + yOrigin - yWorld, 2)) >
+          m_rc) {
         continue;
       }
 
       // Map not big enough
       if (xMap + i >= map.info.width || yMap + j >= map.info.height) {
-        ROS_INFO("Cell unknown");
-        return Unknown;
+        ROS_WARN("Cell unknown");
+        unknown = true;
       }
 
       // Any map cell with occupancy probability > 50
@@ -205,10 +202,12 @@ PartitionBinn::CellStatus PartitionBinn::calculateStatus(
 
       // Any unknown map cell
       if (map.data[m] < 0) {
-        return Unknown;
+        unknown = true;
       }
     }
   }
+
+  if (unknown) return Unknown;
 
   return Free;
 }

@@ -74,7 +74,7 @@ class PartitionBinn {
   int m_m;               // columns
   std::vector<int> m_n;  // rows
 
-  double m_scanRange = 7;  // in meters
+  double m_scanRange = 10;  // in meters
 
   std::vector<std::vector<Cell>> m_cells;  // m_cells[column][row]
 };
