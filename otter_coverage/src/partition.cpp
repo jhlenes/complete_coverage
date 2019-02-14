@@ -2,10 +2,12 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <cmath>
 
+namespace otter_coverage {
+
 Partition::Partition() {}
 
 Partition::Partition(ros::NodeHandle nh) : m_initialized(false) {
-  ROS_INFO("PartitionBinn constructed.");
+  ROS_INFO("Partition constructed.");
 
   m_nh = nh;
   m_pub = m_nh.advertise<visualization_msgs::MarkerArray>("cell_partition", 1);
@@ -28,6 +30,8 @@ void Partition::initialize(double x0, double y0, double x1, double y1,
   m_numColumns = static_cast<int>(std::ceil((x1 - x0) / cellSize));
   m_numRows = static_cast<int>(std::ceil((y1 - y0) / cellSize));
 
+  ROS_INFO("rows: %d cols: %d", m_numRows, m_numColumns);
+
   // Initialize cells
   std::vector<std::vector<Cell>> cells;
   for (int col = 0; col < m_numColumns; col++) {
@@ -42,12 +46,12 @@ void Partition::initialize(double x0, double y0, double x1, double y1,
 }
 
 void Partition::drawPartition() {
+  if (!m_initialized) return;
   visualization_msgs::MarkerArray ma;
   int id = 0;
   for (int col = 0; col < m_numColumns; col++) {
     for (int row = 0; row < m_numRows; row++) {
-      double x;
-      double y;
+      double x, y;
       gridToWorld(col, row, x, y);
 
       visualization_msgs::Marker marker;
@@ -189,6 +193,10 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid &map,
   return Free;
 }
 
+int Partition::getNumRows() const { return m_numRows; }
+
+int Partition::getNumColumns() const { return m_numColumns; }
+
 void Partition::gridToWorld(int col, int row, double &x, double &y) {
   double xLocal;
   double yLocal;
@@ -230,3 +238,5 @@ bool Partition::hasCompleteCoverage() {
   }
   return true;
 }
+
+}  // namespace otter_coverage

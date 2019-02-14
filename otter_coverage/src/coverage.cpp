@@ -2,7 +2,7 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <otter_coverage/DubinInput.h>
-#include <tf/tf.h>
+#include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <math.h>
@@ -14,15 +14,27 @@
 namespace otter_coverage {
 
 Coverage::Coverage() {
-  ros::NodeHandle private_nh("~");
   ros::NodeHandle nh;
+  ros::NodeHandle nhP("~");
 
-  m_tile_resolution = private_nh.param("tile_resolution", 1.0);
-  m_goal_tolerance = private_nh.param("goal_tolerance", 0.5);
+  // Get parameters
+  m_x0 = nhP.param("x0", -15);
+  m_y0 = nhP.param("y0", -10);
+  m_x1 = nhP.param("x1", 50);
+  m_y1 = nhP.param("y1", 20);
+  m_tileResolution = nhP.param("tile_resolution", 5.0);
+  m_scanRange = nhP.param("scan_range", 10);
+  m_goalTolerance = nhP.param("goal_tolerance", 1.0);
 
+  // Set up partition
+  m_partition = Partition(nh);
+  m_partition.initialize(m_x0, m_y0, m_x1, m_y1, m_tileResolution, m_scanRange);
+
+  // Set up subscribers
   ros::Subscriber sub =
       nh.subscribe("inflated_map", 1000, &Coverage::mapCallback, this);
 
+  // Set up publishers
   m_goalPub =
       nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
   m_pathPub = nh.advertise<nav_msgs::Path>("covered_path", 1000);
@@ -32,20 +44,17 @@ Coverage::Coverage() {
   mainLoop(nh);
 }
 
-Coverage::~Coverage() {}
 
 void Coverage::mapCallback(const nav_msgs::OccupancyGrid &grid) {
-  if (!m_mapInitialized) {
-    m_mapInitialized = true;
-  }
-  m_grid = grid;
+  if (!m_mapInitialized) m_mapInitialized = true;
+  m_partition.update(grid, m_pose.x, m_pose.y);
 }
 
 void Coverage::mainLoop(ros::NodeHandle nh) {
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
 
-  ros::Rate rate(10.0);
+  ros::Rate rate(5.0);
   while (nh.ok()) {
     if (!updatePose(tfBuffer)) {
       ROS_WARN("Transform from map to base_link not found.");
@@ -66,67 +75,58 @@ void Coverage::mainLoop(ros::NodeHandle nh) {
  * @return true - if a transform from map to base_link was found.
  */
 bool Coverage::updatePose(const tf2_ros::Buffer &tfBuffer) {
-  geometry_msgs::TransformStamped transformStamped;
+  geometry_msgs::TransformStamped tfStamped;
   try {
-    transformStamped = tfBuffer.lookupTransform(
-        "map", "base_link", ros::Time(0.0), ros::Duration(1.0));
+    tfStamped = tfBuffer.lookupTransform("map", "base_link", ros::Time(0.0),
+                                         ros::Duration(1.0));
   } catch (tf2::TransformException &ex) {
+    ROS_WARN("%s", ex.what());
     return false;
   }
 
-  m_pose.x = transformStamped.transform.translation.x;
-  m_pose.y = transformStamped.transform.translation.y;
-  m_pose.psi = tf::getYaw(transformStamped.transform.rotation);
+  m_pose.x = tfStamped.transform.translation.x;
+  m_pose.y = tfStamped.transform.translation.y;
+  m_pose.psi = tf2::getYaw(tfStamped.transform.rotation);
 
   return true;
 }
 
 void Coverage::boustrophedonMotion() {
-  // we need to wait until we have a map
-  if (!m_mapInitialized) {
-    return;
-  }
+  // We need to wait until we have a map
+  if (!m_mapInitialized) return;
 
-  // find tile where robot is located
-  int tileX = std::floor(m_pose.x / m_tile_resolution) + ORIGIN_X;
-  int tileY = std::floor(m_pose.y / m_tile_resolution) + ORIGIN_Y;
-
-  // TODO: Another data structure?
-  if (tileX < 0 || tileX > TILE_SIZE - 1 || tileY < 0 ||
-      tileY > TILE_SIZE - 1) {
-    ROS_WARN_STREAM("Tile map is too small (0 - "
-                    << TILE_SIZE << "). x: " << tileX << " y: " << tileY);
-  }
+  // Find tile where robot is located
+  int tileX, tileY;
+  m_partition.worldToGrid(m_pose.x, m_pose.y, tileX, tileY);
 
   static Goal goal = {true, true, tileX, tileY};
 
-  // add starting point
+  // When initializing, move to center of start tile
   static bool initialized = false;
   if (!initialized) {
     publishGoal(tileY, tileX, goal);
     initialized = true;
   }
 
-  // we want to go back to the start once we are finished
+  // We want to go back to the start once we are finished
   static const int startX = tileX;
   static const int startY = tileY;
   static bool finished = false;
 
   checkGoal(goal);
 
-  // check to find the first available direction in the priority of
-  // north-south-east-west.
+  // Check to find the next tile in north-south-east-west priority.
   checkDirection(1, 0, tileX, tileY, goal);
   checkDirection(-1, 0, tileX, tileY, goal);
   checkDirection(0, -1, tileX, tileY, goal);
   checkDirection(0, 1, tileX, tileY, goal);
 
-  // a new goal has been given manually
+  // A new goal has been given manually
   if (finished && goal.isNew) {
     finished = false;
   }
 
-  // if all directions are blocked, then the critical point has been reached
+  // If all directions are blocked, then the critical point has been reached
   if (!goal.exists) {
     if (locateBestBacktrackingPoint(goal.x, goal.y, tileX, tileY)) {
       ROS_INFO("Critical point! Backtracking...");
@@ -152,42 +152,47 @@ void Coverage::boustrophedonMotion() {
 
 void Coverage::checkGoal(Goal &goal) {
   if (goal.exists) {
-    // check if the robot is within a circle of acceptance with radius
-    // GOAL_TOLERANCE
-    geometry_msgs::PoseStamped goalPose =
-        m_coveredPath.poses[m_coveredPath.poses.size() - 1];
+    // Check if the robot is within a circle of acceptance
+    geometry_msgs::PoseStamped goalPose = m_coveredPath.poses.back();
     if (std::sqrt(std::pow(goalPose.pose.position.x - m_pose.x, 2) +
                   std::pow(goalPose.pose.position.y - m_pose.y, 2)) <
-        m_goal_tolerance) {
+        m_goalTolerance) {
       goal.exists = false;
       goal.isNew = false;
-      M[goal.x][goal.y] = COVERED;
+      m_partition.setCovered(goal.x, goal.y, true);
 
-      // check if goal is blocked
-    } else if (!isFree(goal.x, goal.y, true)) {
+      // Check if goal is blocked
+    } else if (m_partition.getStatus(goal.x, goal.y) == Partition::Blocked) {
       ROS_INFO("Current waypoint is blocked. Searching for new... ");
       m_coveredPath.poses.erase(m_coveredPath.poses.end() - 1);
       goal.exists = false;
       goal.isNew = false;
-      M[goal.x][goal.y] = BLOCKED;
     }
   }
+}
+
+bool Coverage::blockedOrCovered(int i, int j) {
+  return m_partition.getStatus(i, j) == Partition::Blocked ||
+         m_partition.isCovered(i, j);
 }
 
 bool Coverage::isBacktrackingPoint(int i, int j) {
   // TODO: '== BLOCKED' or '>= COVERED' ?
 
   // b(s1,s8) or b(s1,s2)
-  bool eastBP = M[i][j - 1] == FREE &&
-                (M[i + 1][j - 1] >= COVERED || M[i - 1][j - 1] >= COVERED);
+  bool eastBP =
+      m_partition.getStatus(i, j - 1) == Partition::Free &&
+      (blockedOrCovered(i + 1, j - 1) || blockedOrCovered(i - 1, j - 1));
 
   // b(s5,s6) or b(s5,s4)
-  bool westBP = M[i][j + 1] == FREE &&
-                (M[i + 1][j + 1] >= COVERED || M[i - 1][j + 1] >= COVERED);
+  bool westBP =
+      m_partition.getStatus(i, j + 1) == Partition::Free &&
+      (blockedOrCovered(i + 1, j + 1) || blockedOrCovered(i - 1, j + 1));
 
   // b(s7,s6) or b(s7,s8)
-  bool southBP = M[i - 1][j] == FREE &&
-                 (M[i - 1][j + 1] >= COVERED || M[i - 1][j - 1] >= COVERED);
+  bool southBP =
+      m_partition.getStatus(i - 1, j) == Partition::Free &&
+      (blockedOrCovered(i - 1, j + 1) || blockedOrCovered(i - 1, j - 1));
 
   // Note: north can not be a BP because of the north-south-east-west check
   // priority.
@@ -201,18 +206,18 @@ bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
   int closestPoint = 0;
   double minDistance = -1.0;
 
-  for (int i = 1; i < TILE_SIZE - 1; i++) {
-    for (int j = 1; j < TILE_SIZE - 1; j++) {
-      if (M[i][j] != COVERED) {
+  for (int col = 0; col < m_partition.getNumColumns(); col++) {
+    for (int row = 0; row < m_partition.getNumRows(); row++) {
+      if (!m_partition.isCovered(col, row)) {
         continue;
       }
-      if (isBacktrackingPoint(i, j)) {
-        tile point = {i, j};
+      if (isBacktrackingPoint(col, row)) {
+        tile point = {col, row};
         BPs.push_back(point);
 
-        // check if closest point
+        // Check if closest point
         double dist =
-            std::sqrt(std::pow(i - tileX, 2) + std::pow(j - tileY, 2));
+            std::sqrt(std::pow(col - tileX, 2) + std::pow(row - tileY, 2));
         if (dist < minDistance || minDistance < 0) {
           closestPoint = BPs.size() - 1;
           minDistance = dist;
@@ -221,7 +226,7 @@ bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
     }
   }
 
-  // find the nearest point
+  // Find the nearest point
   if (BPs.size() > 0) {
     tile best = BPs.at(closestPoint);
     goalX = best.x;
@@ -229,13 +234,15 @@ bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
     return true;
   }
 
-  // no good backtracking point found, find any free point instead
-  for (int i = 1; i < TILE_SIZE - 1; i++) {
-    for (int j = 1; j < TILE_SIZE - 1; j++) {
-      if (M[i][j] != COVERED) {
+  // No good backtracking point found, find any free point instead
+  for (int i = 0; i < m_partition.getNumColumns(); i++) {
+    for (int j = 0; j < m_partition.getNumRows(); j++) {
+      if (!m_partition.isCovered(i, j)) {
         continue;
       }
-      if (M[i][j - 1] == FREE || M[i][j + 1] == FREE || M[i - 1][j] == FREE) {
+      if (m_partition.getStatus(i, j - 1) == Partition::Free ||
+          m_partition.getStatus(i, j + 1) == Partition::Free ||
+          m_partition.getStatus(i - 1, j) == Partition::Free) {
         goalX = i;
         goalY = j;
         return true;
@@ -243,13 +250,13 @@ bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
     }
   }
 
-  // no free points, check whole map
-  for (int i = 1; i < TILE_SIZE - 1; i++) {
-    for (int j = 1; j < TILE_SIZE - 1; j++) {
-      if (M[i][j] == COVERED) {
+  // No free points, check whole map
+  for (int i = 0; i < m_partition.getNumColumns(); i++) {
+    for (int j = 0; j < m_partition.getNumRows(); j++) {
+      if (!m_partition.isCovered(i, j)) {
         continue;
       }
-      if (isFree(i, j, false)) {
+      if (m_partition.getStatus(i, j) == Partition::Free) {
         goalX = i;
         goalY = j;
         return true;
@@ -260,61 +267,22 @@ bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
   return false;
 }
 
-bool Coverage::isFree(int xTile, int yTile, bool allowUnknown) {
-  // a tile contains many grid cells, need to check if all are free
-
-  // find position of tile in map frame
-  double xPos = (xTile - ORIGIN_X) * m_tile_resolution;
-  double yPos = (yTile - ORIGIN_Y) * m_tile_resolution;
-
-  // use map frame position to find corner grid cell in the tile
-  int gridX = (xPos - m_grid.info.origin.position.x) / m_grid.info.resolution;
-  int gridY = (yPos - m_grid.info.origin.position.y) / m_grid.info.resolution;
-  if (gridX < 0 || gridY < 0) {
-    return false;
-  }
-
-  // iterate through all grid cells in the tile, starting from the corner grid
-  // cell
-  for (int i = 0; i * m_grid.info.resolution < m_tile_resolution; i++) {
-    for (int j = 0; j * m_grid.info.resolution < m_tile_resolution; j++) {
-      int gridIndex = (gridY + j) * m_grid.info.width + (gridX + i);
-      if (gridY + j >= m_grid.info.height || gridX + i >= m_grid.info.width) {
-        return false;
-      }
-      if (!allowUnknown && m_grid.data[gridIndex] < 0) {
-        return false;
-      }
-      if (m_grid.data[gridIndex] > 50) {
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 void Coverage::checkDirection(int xOffset, int yOffset, int tileX, int tileY,
                               Goal &goal) {
-  if (tileX + xOffset >= TILE_SIZE || tileX + xOffset < 0 ||
-      tileY + yOffset >= TILE_SIZE || tileY + yOffset < 0) {
+  if (goal.exists) return;
+  if (tileX + xOffset >= m_partition.getNumColumns() || tileX + xOffset < 0 ||
+      tileY + yOffset >= m_partition.getNumRows() || tileY + yOffset < 0) {
     return;
   }
 
-  if (M[tileX + xOffset][tileY + yOffset] != COVERED) {
-    if (isFree(tileX + xOffset, tileY + yOffset, true)) {
-      M[tileX + xOffset][tileY + yOffset] = FREE;
-
-      if (!goal.exists) {
-        ROS_INFO_STREAM("Moving to +x: " << xOffset << " +y: " << yOffset);
-        goal.x = tileX + xOffset;
-        goal.y = tileY + yOffset;
-        goal.exists = true;
-        goal.isNew = true;
-      }
-    } else {
-      M[tileX + xOffset][tileY + yOffset] = BLOCKED;
-    }
+  if (!m_partition.isCovered(tileX + xOffset, tileY + yOffset) &&
+      m_partition.getStatus(tileX + xOffset, tileY + yOffset) ==
+          Partition::Free) {
+    ROS_INFO("Moving to +x: %d +y: %d", xOffset, yOffset);
+    goal.x = tileX + xOffset;
+    goal.y = tileY + yOffset;
+    goal.exists = true;
+    goal.isNew = true;
   }
 }
 
@@ -325,12 +293,15 @@ void Coverage::publishGoal(int tileY, int tileX, Goal goal) {
   goalPose.header.frame_id = "map";
 
   // set goal to middle of tile
-  goalPose.pose.position.x = (goal.x + 0.5 - ORIGIN_X) * m_tile_resolution;
-  goalPose.pose.position.y = (goal.y + 0.5 - ORIGIN_Y) * m_tile_resolution;
+  double x, y;
+  m_partition.gridToWorld(goal.x, goal.y, x, y);
+  goalPose.pose.position.x = x;
+  goalPose.pose.position.y = y;
   goalPose.pose.position.z = 0.0;
 
-  double psi = std::atan2(goal.y - tileY, goal.x - tileX);
-  tf::Quaternion q = tf::createQuaternionFromYaw(psi);
+  double yaw = std::atan2(goal.y - tileY, goal.x - tileX);
+  tf2::Quaternion q;
+  q.setRPY(0, 0, yaw);
 
   goalPose.pose.orientation.x = q.x();
   goalPose.pose.orientation.y = q.y();
@@ -355,7 +326,7 @@ void Coverage::publishGoal(int tileY, int tileX, Goal goal) {
       m_pose.y;  //(tileY + 0.5 - ORIGIN_Y) * m_tile_resolution;
   startPose.pose.position.z = 0.0;
 
-  q = tf::createQuaternionFromYaw(m_pose.psi);
+  q.setRPY(0, 0, m_pose.psi);
   startPose.pose.orientation.x = q.x();
   startPose.pose.orientation.y = q.y();
   startPose.pose.orientation.z = q.z();
