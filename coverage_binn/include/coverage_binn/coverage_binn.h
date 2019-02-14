@@ -21,8 +21,9 @@ class CoverageBinn {
   double calculateWeightSum(int l, int k);
   double calculateWeight(int l0, int k0, int l1, int k1);
   void getNeighbors(int l, int k, std::vector<PartitionBinn::Point>& neighbors);
-  void findNextPos(double& xNext, double& yNext);
+  void findNextCell(int& lNext, int& kNext, double& yawNext);
   double scoreFunction(double neuralActivity, double yaw, double targetYaw);
+  void publishGoal(double x, double y, double yaw);
 
   struct Pose {
     double x;
@@ -42,7 +43,12 @@ class CoverageBinn {
   const double m_mu = 1.0;
   const double m_lambda = 0.1;
 
+  // Params
+  double m_circleAcceptance = 1.0;
+
   SimpleDubinsPath m_dubin;
+
+  ros::Publisher m_goalPub;
 };
 
 #endif

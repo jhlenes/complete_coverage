@@ -1,6 +1,11 @@
 #include <coverage_binn/coverage_binn.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <tf2/utils.h>
 #include <cmath>
+
+double pointDistance(double x0, double y0, double x1, double y1) {
+  return std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
+}
 
 CoverageBinn::CoverageBinn() : m_mapInitialized(false) {
   ROS_INFO("coverage_binn_node started.");
@@ -9,18 +14,18 @@ CoverageBinn::CoverageBinn() : m_mapInitialized(false) {
   ros::NodeHandle nhPrivate("~");
 
   // Get parameters
-  ROS_INFO("Starting main loop.");
 
   // Set up partition. TODO: set up with parameters
   m_partition = PartitionBinn(nh);
   m_partition.initialize(-15, -10, 15, 10, 1.5);
-  ROS_INFO("Starting main loop.");
 
   // Set up subscribers
   ros::Subscriber mapSub =
       nh.subscribe("inflated_map", 1000, &CoverageBinn::onMapReceived, this);
 
   // Set up publishers
+  m_goalPub =
+	  nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
 
   // Start main loop
   ROS_INFO("Starting main loop.");
@@ -75,12 +80,16 @@ bool CoverageBinn::updateRobotPose(const tf2_ros::Buffer& tfBuffer) {
 void CoverageBinn::BINN() {
   if (!m_mapInitialized) return;
 
+  // Are we finished?
+  // TODO: check for free, uncovered cells
+  if (m_partition.hasCompleteCoverage()) {
+	ROS_INFO("Finished!");
+	return;
+  }
+
   static ros::Time lastTime = ros::Time::now();
   double deltaTime = (ros::Time::now() - lastTime).toSec();
   lastTime = ros::Time::now();
-
-  // Are we finished?
-  // TODO: check for free, uncovered cells
 
   // Update neural activity of each cell
   // TODO: figure out why deltaTime by itself is too large
@@ -88,13 +97,35 @@ void CoverageBinn::BINN() {
   evolveNeuralNetwork(deltaTime / 10.0);
 
   // Find next position
+  int lNext, kNext;
+  double yawNext;
+  findNextCell(lNext, kNext, yawNext);
   double xNext, yNext;
-  findNextPos(xNext, yNext);
+  m_partition.gridToWorld(lNext, kNext, xNext, yNext);
 
-  // Set current cell as covered
+  // Find current position
   int l, k;
   m_partition.worldToGrid(m_pose.x, m_pose.y, l, k);
-  m_partition.setCellCovered(l, k, true);
+  double xCurrent, yCurrent;
+  m_partition.gridToWorld(l, k, xCurrent, yCurrent);
+
+  // Set current cell as covered, if we're within a circle of acceptance
+  if (pointDistance(m_pose.x, m_pose.y, xCurrent, yCurrent) <
+	  m_circleAcceptance) {
+	m_partition.setCellCovered(l, k, true);
+  }
+
+  static int lGoal = lNext;
+  static int kGoal = kNext;
+  if (lGoal != lNext || kGoal != kNext) {
+	lGoal = lNext;
+	kGoal = kNext;
+
+	publishGoal(xNext, yNext, yawNext);
+  }
+
+  ROS_INFO_STREAM("Current pos: " << l << ", " << k);
+  ROS_INFO_STREAM("Next pos:    " << lNext << ", " << kNext << ", " << yawNext);
 }
 
 void CoverageBinn::evolveNeuralNetwork(double deltaTime) {
@@ -182,7 +213,7 @@ void CoverageBinn::getNeighbors(int l, int k,
   }
 }
 
-void CoverageBinn::findNextPos(double& xNext, double& yNext) {
+void CoverageBinn::findNextCell(int& lNext, int& kNext, double& yawNext) {
   // Get cell position
   int l, k;
   m_partition.worldToGrid(m_pose.x, m_pose.y, l, k);
@@ -191,12 +222,12 @@ void CoverageBinn::findNextPos(double& xNext, double& yNext) {
   std::vector<PartitionBinn::Point> neighbors;
   getNeighbors(l, k, neighbors);
 
-  // Consider current cell first
-  PartitionBinn::Point best = {l, k};
-  double maxScore =
-      scoreFunction(m_partition.getCellValue(l, k), m_pose.yaw, m_pose.yaw);
+  // Consider current cell as well
+  neighbors.push_back({l, k});
 
   // Find neighbor with highest score
+  PartitionBinn::Point best = {l, k};
+  double maxScore = std::numeric_limits<double>::lowest();
   for (auto nb : neighbors) {
     if (nb.l < 1 || nb.l > m_partition.getCells().size() || nb.k < 1 ||
         nb.k > m_partition.getCells()[nb.l - 1].size()) {
@@ -221,14 +252,13 @@ void CoverageBinn::findNextPos(double& xNext, double& yNext) {
       if (score > maxScore) {
         maxScore = score;
         best = nb;
+		yawNext = yawTarget;
       }
     }
   }
 
-  ROS_INFO_STREAM("Current pos: " << l << ", " << k);
-  ROS_INFO_STREAM("Next pos:    " << best.l << ", " << best.k);
-  xNext = best.l;
-  yNext = best.k;
+  lNext = best.l;
+  kNext = best.k;
 }
 
 double CoverageBinn::scoreFunction(double neuralActivity, double yaw,
@@ -240,4 +270,22 @@ double CoverageBinn::scoreFunction(double neuralActivity, double yaw,
 
   return (1 - diff / M_PI) * m_lambda * neuralActivity +
          (1 - m_lambda) * neuralActivity;
+}
+
+void CoverageBinn::publishGoal(double x, double y, double yaw) {
+  geometry_msgs::PoseStamped goalPose;
+
+  goalPose.header.stamp = ros::Time::now();
+  goalPose.header.frame_id = "map";
+  goalPose.pose.position.x = x;
+  goalPose.pose.position.y = y;
+
+  tf2::Quaternion q;
+  q.setRPY(0, 0, yaw);
+  goalPose.pose.orientation.x = q.x();
+  goalPose.pose.orientation.y = q.y();
+  goalPose.pose.orientation.z = q.z();
+  goalPose.pose.orientation.w = q.w();
+
+  m_goalPub.publish(goalPose);
 }

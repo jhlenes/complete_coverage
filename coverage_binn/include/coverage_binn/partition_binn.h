@@ -54,6 +54,8 @@ class PartitionBinn {
 
   void getNeighbors(int l, int k, double dist, std::vector<Point>& neighbors);
 
+  bool hasCompleteCoverage();
+
  private:
   /**
    * @brief given the column l and the row k, calculates

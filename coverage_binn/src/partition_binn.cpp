@@ -266,3 +266,15 @@ void PartitionBinn::localToGrid(double xc, double yc, int &l, int &k) {
         1;
   }
 }
+
+bool PartitionBinn::hasCompleteCoverage() {
+  // Any non-covered free cells?
+  for (auto column : m_cells) {
+	for (auto cell : column) {
+	  if (!cell.isCovered && cell.status == Free) {
+		return false;
+	  }
+	}
+  }
+  return true;
+}
