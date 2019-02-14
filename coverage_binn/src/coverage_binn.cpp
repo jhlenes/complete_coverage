@@ -11,13 +11,19 @@ CoverageBinn::CoverageBinn() : m_mapInitialized(false) {
   ROS_INFO("coverage_binn_node started.");
 
   ros::NodeHandle nh;
-  ros::NodeHandle nhPrivate("~");
+  ros::NodeHandle nhP("~");
 
   // Get parameters
+  m_x0 = nhP.param("x0", -15.0);
+  m_y0 = nhP.param("y0", -10.0);
+  m_x1 = nhP.param("x1", 50.0);
+  m_y1 = nhP.param("y1", 20.0);
+  double cellRadius = nhP.param("cell_radius", 2.5);
+  double scanRange = nhP.param("scan_range", 12);
 
   // Set up partition. TODO: set up with parameters
   m_partition = PartitionBinn(nh);
-  m_partition.initialize(-15, -10, 15, 10, 1.5);
+  m_partition.initialize(m_x0, m_y0, m_x1, m_y1, cellRadius, scanRange);
 
   // Set up subscribers
   ros::Subscriber mapSub =
@@ -25,7 +31,7 @@ CoverageBinn::CoverageBinn() : m_mapInitialized(false) {
 
   // Set up publishers
   m_goalPub =
-	  nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
+      nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
 
   // Start main loop
   ROS_INFO("Starting main loop.");
@@ -43,7 +49,7 @@ void CoverageBinn::mainLoop(ros::NodeHandle& nh) {
   tf2_ros::TransformListener tfListener(tfBuffer);
 
   // Loop
-  ros::Rate rate(10.0);
+  ros::Rate rate(5.0);
   while (nh.ok()) {
     if (!updateRobotPose(tfBuffer)) {
       ros::Duration(1.0).sleep();
@@ -83,8 +89,8 @@ void CoverageBinn::BINN() {
   // Are we finished?
   // TODO: check for free, uncovered cells
   if (m_partition.hasCompleteCoverage()) {
-	ROS_INFO("Finished!");
-	return;
+    ROS_INFO("Finished!");
+    return;
   }
 
   static ros::Time lastTime = ros::Time::now();
@@ -94,7 +100,7 @@ void CoverageBinn::BINN() {
   // Update neural activity of each cell
   // TODO: figure out why deltaTime by itself is too large
   // TODO: doesn't work with higher deltaTime
-  evolveNeuralNetwork(deltaTime / 10.0);
+  evolveNeuralNetwork(0.01);
 
   // Find next position
   int lNext, kNext;
@@ -111,17 +117,21 @@ void CoverageBinn::BINN() {
 
   // Set current cell as covered, if we're within a circle of acceptance
   if (pointDistance(m_pose.x, m_pose.y, xCurrent, yCurrent) <
-	  m_circleAcceptance) {
-	m_partition.setCellCovered(l, k, true);
+      m_circleAcceptance) {
+    m_partition.setCellCovered(l, k, true);
   }
 
   static int lGoal = lNext;
   static int kGoal = kNext;
   if (lGoal != lNext || kGoal != kNext) {
-	lGoal = lNext;
-	kGoal = kNext;
-
-	publishGoal(xNext, yNext, yawNext);
+    // Not covered, free and already in goal cell => don't switch target
+    if (m_partition.getCellStatus(l, k) == PartitionBinn::Free &&
+        !m_partition.isCellCovered(l, k) && lGoal == l && kGoal == k) {
+    } else {
+      lGoal = lNext;
+      kGoal = kNext;
+      publishGoal(xNext, yNext, yawNext);
+    }
   }
 
   ROS_INFO_STREAM("Current pos: " << l << ", " << k);
@@ -134,8 +144,10 @@ void CoverageBinn::evolveNeuralNetwork(double deltaTime) {
   for (int l = 1; l <= cells.size(); l++) {
     auto column = cells[l - 1];
     for (int k = 1; k <= column.size(); k++) {
+      double xCell, yCell;
+      m_partition.gridToWorld(l, k, xCell, yCell);
       double I = calculateI(m_partition.getCellStatus(l, k),
-                            m_partition.isCellCovered(l, k));
+                            m_partition.isCellCovered(l, k), xCell, yCell);
 
       double weightSum = calculateWeightSum(l, k);
 
@@ -150,10 +162,13 @@ void CoverageBinn::evolveNeuralNetwork(double deltaTime) {
   }
 }
 
-double CoverageBinn::calculateI(PartitionBinn::CellStatus status,
-                                bool covered) {
+double CoverageBinn::calculateI(PartitionBinn::CellStatus status, bool covered,
+                                double x, double y) {
   // Scaling factor for target priorities: 0 < lambda <= 1
-  double lambda = 1;  // TODO: Prioritize targets smarter
+  // TODO: Prioritize targets smarter, maybe do this with score function
+  // instead.
+  double lambda = 1;
+  // lambda -= 0.9 * (1 - (x + m_x0) / (m_x1 - m_x0));
 
   if (status == PartitionBinn::Free && !covered) {  // target
     return lambda * m_E;
@@ -166,7 +181,7 @@ double CoverageBinn::calculateI(PartitionBinn::CellStatus status,
 
 double CoverageBinn::calculateWeightSum(int l, int k) {
   std::vector<PartitionBinn::Point> neighbors;
-  getNeighbors(l, k, neighbors);
+  getNeighbors2(l, k, neighbors);
 
   double weightSum = 0.0;
   for (auto nb : neighbors) {
@@ -213,6 +228,21 @@ void CoverageBinn::getNeighbors(int l, int k,
   }
 }
 
+void CoverageBinn::getNeighbors2(int l, int k,
+                                 std::vector<PartitionBinn::Point>& neighbors) {
+  neighbors.push_back({l + 1, k});
+  neighbors.push_back({l - 1, k});
+  neighbors.push_back({l, k + 1});
+  neighbors.push_back({l, k - 1});
+  if (l % 2 == 1) {
+    neighbors.push_back({l + 1, k - 1});
+    neighbors.push_back({l - 1, k - 1});
+  } else {  // l % 2 == 0
+    neighbors.push_back({l + 1, k + 1});
+    neighbors.push_back({l - 1, k + 1});
+  }
+}
+
 void CoverageBinn::findNextCell(int& lNext, int& kNext, double& yawNext) {
   // Get cell position
   int l, k;
@@ -220,7 +250,7 @@ void CoverageBinn::findNextCell(int& lNext, int& kNext, double& yawNext) {
 
   // Next pos has to be among the neighbors
   std::vector<PartitionBinn::Point> neighbors;
-  getNeighbors(l, k, neighbors);
+  getNeighbors2(l, k, neighbors);
 
   // Consider current cell as well
   neighbors.push_back({l, k});
@@ -252,7 +282,7 @@ void CoverageBinn::findNextCell(int& lNext, int& kNext, double& yawNext) {
       if (score > maxScore) {
         maxScore = score;
         best = nb;
-		yawNext = yawTarget;
+        yawNext = yawTarget;
       }
     }
   }

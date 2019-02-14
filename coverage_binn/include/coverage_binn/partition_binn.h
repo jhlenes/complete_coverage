@@ -22,7 +22,8 @@ class PartitionBinn {
   PartitionBinn();
   PartitionBinn(ros::NodeHandle nh);
 
-  void initialize(double x0, double y0, double x1, double y1, double rc);
+  void initialize(double x0, double y0, double x1, double y1, double rc,
+				  double scanRange);
 
   void drawPartition();
 
@@ -95,7 +96,7 @@ class PartitionBinn {
   int m_m;               // columns
   std::vector<int> m_n;  // rows
 
-  double m_scanRange = 10;  // in meters
+  double m_scanRange;  // in meters
 
   std::vector<std::vector<Cell>> m_cells;  // m_cells[column][row]
 };

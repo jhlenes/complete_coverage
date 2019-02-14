@@ -37,7 +37,7 @@ TRAJECTORY_BUILDER_2D.max_range = 24.95
 TRAJECTORY_BUILDER_2D.use_imu_data = true
 TRAJECTORY_BUILDER_2D.ceres_scan_matcher.translation_weight = 30
 TRAJECTORY_BUILDER_2D.ceres_scan_matcher.rotation_weight = 100
-TRAJECTORY_BUILDER_2D.missing_data_ray_length = 8
+TRAJECTORY_BUILDER_2D.missing_data_ray_length = 15
 
 POSE_GRAPH.optimization_problem.huber_scale = 5e2
 POSE_GRAPH.optimize_every_n_nodes = 90

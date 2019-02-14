@@ -12,7 +12,7 @@ PartitionBinn::PartitionBinn(ros::NodeHandle nh) : m_initialized(false) {
 }
 
 void PartitionBinn::initialize(double x0, double y0, double x1, double y1,
-                               double rc) {
+							   double rc, double scanRange) {
   // TODO: rotate coordinate system? so that rectangle doesn't need to be
   // aligned with x and y axis in map frame.
 
@@ -25,6 +25,7 @@ void PartitionBinn::initialize(double x0, double y0, double x1, double y1,
   m_x1 = x1;
   m_y1 = y1;
   m_rc = rc;
+  m_scanRange = scanRange;
 
   // Find the size of the workspace
   m_Xw = x1 - x0;
@@ -106,7 +107,7 @@ void PartitionBinn::drawPartition() {
       }
       marker.color.a = 0.1f;
 
-      marker.lifetime = ros::Duration(2.0);
+	  marker.lifetime = ros::Duration(0.0);
       ma.markers.push_back(marker);
     }
   }
@@ -205,9 +206,9 @@ PartitionBinn::CellStatus PartitionBinn::calculateStatus(
       }
 
       // Any unknown map cell
-      if (map.data[m] < 0) {
-        unknown = true;
-      }
+	  //if (map.data[m] < 0) {
+	  //  unknown = true;
+	  //}
     }
   }
 

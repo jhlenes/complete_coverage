@@ -17,10 +17,13 @@ class CoverageBinn {
   bool updateRobotPose(const tf2_ros::Buffer& tfBuffer);
   void BINN();
   void evolveNeuralNetwork(double deltaTime);
-  double calculateI(PartitionBinn::CellStatus status, bool covered);
+  double calculateI(PartitionBinn::CellStatus status, bool covered, double x,
+					double y);
   double calculateWeightSum(int l, int k);
   double calculateWeight(int l0, int k0, int l1, int k1);
   void getNeighbors(int l, int k, std::vector<PartitionBinn::Point>& neighbors);
+  void getNeighbors2(int l, int k,
+					 std::vector<PartitionBinn::Point>& neighbors);
   void findNextCell(int& lNext, int& kNext, double& yawNext);
   double scoreFunction(double neuralActivity, double yaw, double targetYaw);
   void publishGoal(double x, double y, double yaw);
@@ -34,6 +37,12 @@ class CoverageBinn {
   bool m_mapInitialized;
   PartitionBinn m_partition;
   Pose m_pose;
+
+  // Partition
+  double m_x0;
+  double m_y0;
+  double m_x1;
+  double m_y1;
 
   // Neural network params
   const double m_A = 50.0;
