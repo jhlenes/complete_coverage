@@ -5,6 +5,8 @@
 #include <ros/ros.h>
 #include <vector>
 
+namespace otter_coverage {
+
 class Partition {
  public:
   enum Status { Unknown, Free, Blocked };
@@ -31,24 +33,26 @@ class Partition {
 
   void worldToGrid(double x, double y, int& col, int& row);
 
-  std::vector<std::vector<Cell>> getCells() { return m_cells; }
+  Status getStatus(int col, int row) { return m_cells[col][row].status; }
 
   void setStatus(int col, int row, Status status) {
     m_cells[col][row].status = status;
   }
 
-  Status getStatus(int col, int row) { return m_cells[col][row].status; }
+  bool isCovered(int col, int row) { return m_cells[col][row].isCovered; }
 
   void setCovered(int col, int row, bool isCovered) {
     m_cells[col][row].isCovered = isCovered;
   }
 
-  bool isCovered(int col, int row) { return m_cells[col][row].isCovered; }
-
   void getNeighbors(int col, int row, double dist,
                     std::vector<Point>& neighbors);
 
   bool hasCompleteCoverage();
+
+  int getNumColumns() const;
+
+  int getNumRows() const;
 
  private:
   void gridToLocal(int col, int row, double& x, double& y);
@@ -75,4 +79,5 @@ class Partition {
   std::vector<std::vector<Cell>> m_cells;  // m_cells[column][row]
 };
 
+}  // namespace otter_coverage
 #endif

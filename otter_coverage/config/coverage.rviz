@@ -3,7 +3,9 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /Grid1
+        - /TF1
       Splitter Ratio: 0.5
     Tree Height: 755
   - Class: rviz/Selection
@@ -31,10 +33,10 @@ Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
-      Cell Size: 1
+      Cell Size: 3
       Class: rviz/Grid
       Color: 160; 160; 164
-      Enabled: true
+      Enabled: false
       Line Style:
         Line Width: 0.029999999329447746
         Value: Lines
@@ -47,7 +49,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 50
       Reference Frame: <Fixed Frame>
-      Value: true
+      Value: false
     - Alpha: 1
       Axes Length: 1
       Axes Radius: 0.10000000149011612
@@ -133,7 +135,7 @@ Visualization Manager:
           Value: false
         utm:
           Value: false
-      Marker Scale: 1
+      Marker Scale: 10
       Name: TF
       Show Arrows: true
       Show Axes: true
@@ -176,6 +178,14 @@ Visualization Manager:
       Topic: /move_base_simple/goal
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /cell_partition
+      Name: MarkerArray
+      Namespaces:
+        shapes: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -201,16 +211,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 63.269287109375
+      Distance: 78.72267150878906
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 7.314610958099365
-        Y: -2.301508665084839
-        Z: 0.9094924330711365
+        X: 15.009963035583496
+        Y: -4.65947961807251
+        Z: 0.9171403050422668
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -219,7 +229,7 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.143575668334961
+      Yaw: 3.153575897216797
     Saved: ~
 Window Geometry:
   Displays:

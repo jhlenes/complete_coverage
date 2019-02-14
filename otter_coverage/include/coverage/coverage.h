@@ -3,79 +3,74 @@
 
 #include <ros/ros.h>
 
+#include <coverage/partition.h>
+
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Path.h>
 #include <tf2_ros/transform_listener.h>
 
-
 namespace otter_coverage {
 
-    // tile states
-    const int UNKNOWN = 0;
-    const int FREE = 1;
-    const int COVERED = 2;
-    const int BLOCKED = 3;
+class Coverage {
+ public:
+  Coverage();
 
-    const int TILE_SIZE = 100;
-    const int ORIGIN_X = TILE_SIZE / 2;
-    const int ORIGIN_Y = TILE_SIZE / 2;
+ private:
+  struct Pose {
+    double x;
+    double y;
+    double psi;
+  };
 
-    class Coverage {
-        public:
-            Coverage();
-            ~Coverage();
+  struct Goal {
+    bool exists;
+    bool isNew;
+    int x;
+    int y;
+  };
 
-    private:
+  struct tile {
+    int x;
+    int y;
+  };
 
-            // ROS parameters
-            double m_tile_resolution;
-            double m_goal_tolerance;
+  void mapCallback(const nav_msgs::OccupancyGrid &m_grid);
+  void mainLoop(ros::NodeHandle nh);
+  bool updatePose(const tf2_ros::Buffer &tfBuffer);
+  void boustrophedonMotion();
+  void checkGoal(Goal &goal);
+  void checkDirection(int xOffset, int yOffset, int tileX, int tileY,
+                      Goal &goal);
+  bool isFree(int xTile, int yTile, bool allowUnknown);
+  bool locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
+                                   int tileY);
+  bool blockedOrCovered(int i, int j);
+  bool isBacktrackingPoint(int i, int j);
+  void publishGoal(int tileY, int tileX, Goal goal);
 
-            struct pose {
-                double x;
-                double y;
-                double psi;
-            };
+  // ROS parameters
+  double m_x0;
+  double m_y0;
+  double m_x1;
+  double m_y1;
 
-            struct Goal {
-                bool exists;
-                bool isNew;
-                int x;
-                int y;
-            };
+  double m_scanRange;
+  double m_tileResolution;
+  double m_goalTolerance;
 
-            struct tile {
-                int x;
-                int y;
-            };
+  Partition m_partition;
 
-            bool m_mapInitialized;
+  bool m_mapInitialized;
 
-            ros::Publisher m_goalPub;
-            ros::Publisher m_pathPub;
-            ros::Publisher m_dubinPub;
+  ros::Publisher m_goalPub;
+  ros::Publisher m_pathPub;
+  ros::Publisher m_dubinPub;
 
-            nav_msgs::Path m_coveredPath;
-            nav_msgs::OccupancyGrid m_grid;
+  nav_msgs::Path m_coveredPath;
 
-            pose m_pose;
+  Pose m_pose;
+};
 
-            int M[TILE_SIZE][TILE_SIZE] = {};
-
-
-            void mapCallback(const nav_msgs::OccupancyGrid &m_grid);
-            void mainLoop(ros::NodeHandle nh);
-            bool updatePose(const tf2_ros::Buffer &tfBuffer);
-            void boustrophedonMotion();
-            void checkGoal(Goal &goal);
-            void checkDirection(int xOffset, int yOffset, int tileX, int tileY, Goal &goal);
-            bool isFree(int xTile, int yTile, bool allowUnknown);
-            bool locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX, int tileY);
-            bool isBacktrackingPoint(int i, int j);
-            void publishGoal(int tileY, int tileX, Goal goal);
-
-    };
-
-}
+}  // namespace otter_coverage
 
 #endif
