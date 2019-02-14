@@ -23,7 +23,7 @@ class PartitionBinn {
   PartitionBinn(ros::NodeHandle nh);
 
   void initialize(double x0, double y0, double x1, double y1, double rc,
-				  double scanRange);
+                  double scanRange);
 
   void drawPartition();
 

@@ -12,7 +12,7 @@ PartitionBinn::PartitionBinn(ros::NodeHandle nh) : m_initialized(false) {
 }
 
 void PartitionBinn::initialize(double x0, double y0, double x1, double y1,
-							   double rc, double scanRange) {
+                           double rc, double scanRange) {
   // TODO: rotate coordinate system? so that rectangle doesn't need to be
   // aligned with x and y axis in map frame.
 
@@ -107,7 +107,7 @@ void PartitionBinn::drawPartition() {
       }
       marker.color.a = 0.1f;
 
-	  marker.lifetime = ros::Duration(0.0);
+      marker.lifetime = ros::Duration(0.0);
       ma.markers.push_back(marker);
     }
   }
@@ -115,7 +115,7 @@ void PartitionBinn::drawPartition() {
 }
 
 void PartitionBinn::getNeighbors(int l, int k, double dist,
-                                 std::vector<Point> &neighbors) {
+                             std::vector<Point> &neighbors) {
   int maxCellDistance = std::ceil(dist / (1.74 * m_rc));  // 1.74 >= sqrt(3)
 
   double x0, y0;
@@ -136,8 +136,7 @@ void PartitionBinn::getNeighbors(int l, int k, double dist,
 }
 
 // TODO: consider using costmap_2d from navigation to get smaller maps
-void PartitionBinn::update(const nav_msgs::OccupancyGrid &map, double x,
-                           double y) {
+void PartitionBinn::update(const nav_msgs::OccupancyGrid &map, double x, double y) {
   // Update the status of cells based on the map received in a region around the
   // position [x,y]
 
@@ -206,9 +205,9 @@ PartitionBinn::CellStatus PartitionBinn::calculateStatus(
       }
 
       // Any unknown map cell
-	  //if (map.data[m] < 0) {
-	  //  unknown = true;
-	  //}
+      // if (map.data[m] < 0) {
+      //  unknown = true;
+      //}
     }
   }
 
@@ -271,11 +270,11 @@ void PartitionBinn::localToGrid(double xc, double yc, int &l, int &k) {
 bool PartitionBinn::hasCompleteCoverage() {
   // Any non-covered free cells?
   for (auto column : m_cells) {
-	for (auto cell : column) {
-	  if (!cell.isCovered && cell.status == Free) {
-		return false;
-	  }
-	}
+    for (auto cell : column) {
+      if (!cell.isCovered && cell.status == Free) {
+        return false;
+      }
+    }
   }
   return true;
 }
