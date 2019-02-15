@@ -47,6 +47,7 @@ class Coverage {
   bool blockedOrCovered(int i, int j);
   bool isBacktrackingPoint(int i, int j);
   void publishGoal(int tileY, int tileX, Goal goal);
+  double dist(double x0, double y0, double x1, double y1);
 
   // ROS parameters
   double m_x0;

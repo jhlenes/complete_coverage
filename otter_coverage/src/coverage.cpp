@@ -13,6 +13,10 @@
 
 namespace otter_coverage {
 
+double Coverage::dist(double x0, double y0, double x1, double y1) {
+  return std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
+}
+
 Coverage::Coverage() {
   ros::NodeHandle nh;
   ros::NodeHandle nhP("~");
@@ -44,10 +48,9 @@ Coverage::Coverage() {
   mainLoop(nh);
 }
 
-
 void Coverage::mapCallback(const nav_msgs::OccupancyGrid &grid) {
-  if (!m_mapInitialized) m_mapInitialized = true;
   m_partition.update(grid, m_pose.x, m_pose.y);
+  if (!m_mapInitialized) m_mapInitialized = true;
 }
 
 void Coverage::mainLoop(ros::NodeHandle nh) {
@@ -172,28 +175,37 @@ void Coverage::checkGoal(Goal &goal) {
 }
 
 bool Coverage::blockedOrCovered(int i, int j) {
+  if (i < 0 || i >= m_partition.getWidth() || j < 0 ||
+      j >= m_partition.getHeight()) {
+    return false;
+  }
   return m_partition.getStatus(i, j) == Partition::Blocked ||
          m_partition.isCovered(i, j);
 }
 
-bool Coverage::isBacktrackingPoint(int i, int j) {
-  // TODO: '== BLOCKED' or '>= COVERED' ?
-
+bool Coverage::isBacktrackingPoint(int gx, int gy) {
   // b(s1,s8) or b(s1,s2)
-  bool eastBP =
-      m_partition.getStatus(i, j - 1) == Partition::Free &&
-      (blockedOrCovered(i + 1, j - 1) || blockedOrCovered(i - 1, j - 1));
+  bool eastBP = false;
+  if (gy - 1 >= 0) {
+    eastBP =
+        m_partition.getStatus(gx, gy - 1) == Partition::Free &&
+        (blockedOrCovered(gx + 1, gy - 1) || blockedOrCovered(gx - 1, gy - 1));
+  }
 
   // b(s5,s6) or b(s5,s4)
-  bool westBP =
-      m_partition.getStatus(i, j + 1) == Partition::Free &&
-      (blockedOrCovered(i + 1, j + 1) || blockedOrCovered(i - 1, j + 1));
+  bool westBP = false;
+  if (gy + 1 < m_partition.getHeight()) {
+    m_partition.getStatus(gx, gy + 1) == Partition::Free &&
+        (blockedOrCovered(gx + 1, gy + 1) || blockedOrCovered(gx - 1, gy + 1));
+  }
 
   // b(s7,s6) or b(s7,s8)
-  bool southBP =
-      m_partition.getStatus(i - 1, j) == Partition::Free &&
-      (blockedOrCovered(i - 1, j + 1) || blockedOrCovered(i - 1, j - 1));
-
+  bool southBP = false;
+  if (gx - 1 >= 0) {
+    southBP =
+        m_partition.getStatus(gx - 1, gy) == Partition::Free &&
+        (blockedOrCovered(gx - 1, gy + 1) || blockedOrCovered(gx - 1, gy - 1));
+  }
   // Note: north can not be a BP because of the north-south-east-west check
   // priority.
 
@@ -202,83 +214,38 @@ bool Coverage::isBacktrackingPoint(int i, int j) {
 
 bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
                                            int tileY) {
-  std::vector<tile> BPs;
-  int closestPoint = 0;
   double minDistance = -1.0;
-
-  for (int col = 0; col < m_partition.getNumColumns(); col++) {
-    for (int row = 0; row < m_partition.getNumRows(); row++) {
-      if (!m_partition.isCovered(col, row)) {
-        continue;
-      }
-      if (isBacktrackingPoint(col, row)) {
-        tile point = {col, row};
-        BPs.push_back(point);
-
-        // Check if closest point
-        double dist =
-            std::sqrt(std::pow(col - tileX, 2) + std::pow(row - tileY, 2));
-        if (dist < minDistance || minDistance < 0) {
-          closestPoint = BPs.size() - 1;
-          minDistance = dist;
+  for (int gx = 0; gx < m_partition.getHeight(); gx++) {
+    for (int gy = 0; gy < m_partition.getWidth(); gy++) {
+      if (isBacktrackingPoint(gx, gy)) {
+        // TODO: change to A*SPT distance
+        double distance = dist(gx, gy, tileX, tileY);
+        if (distance < minDistance) {
+          minDistance = distance;
+          goalX = gx;
+          goalY = gy;
         }
       }
     }
   }
 
-  // Find the nearest point
-  if (BPs.size() > 0) {
-    tile best = BPs.at(closestPoint);
-    goalX = best.x;
-    goalY = best.y;
+  if (minDistance < 0)
+    return false;
+  else
     return true;
-  }
-
-  // No good backtracking point found, find any free point instead
-  for (int i = 0; i < m_partition.getNumColumns(); i++) {
-    for (int j = 0; j < m_partition.getNumRows(); j++) {
-      if (!m_partition.isCovered(i, j)) {
-        continue;
-      }
-      if (m_partition.getStatus(i, j - 1) == Partition::Free ||
-          m_partition.getStatus(i, j + 1) == Partition::Free ||
-          m_partition.getStatus(i - 1, j) == Partition::Free) {
-        goalX = i;
-        goalY = j;
-        return true;
-      }
-    }
-  }
-
-  // No free points, check whole map
-  for (int i = 0; i < m_partition.getNumColumns(); i++) {
-    for (int j = 0; j < m_partition.getNumRows(); j++) {
-      if (!m_partition.isCovered(i, j)) {
-        continue;
-      }
-      if (m_partition.getStatus(i, j) == Partition::Free) {
-        goalX = i;
-        goalY = j;
-        return true;
-      }
-    }
-  }
-
-  return false;
 }
 
 void Coverage::checkDirection(int xOffset, int yOffset, int tileX, int tileY,
                               Goal &goal) {
   if (goal.exists) return;
-  if (tileX + xOffset >= m_partition.getNumColumns() || tileX + xOffset < 0 ||
-      tileY + yOffset >= m_partition.getNumRows() || tileY + yOffset < 0) {
+  if (tileX + xOffset >= m_partition.getWidth() || tileX + xOffset < 0 ||
+      tileY + yOffset >= m_partition.getHeight() || tileY + yOffset < 0) {
     return;
   }
 
   if (!m_partition.isCovered(tileX + xOffset, tileY + yOffset) &&
       m_partition.getStatus(tileX + xOffset, tileY + yOffset) ==
           Partition::Free) {
-    ROS_INFO("Moving to +x: %d +y: %d", xOffset, yOffset);
     goal.x = tileX + xOffset;
     goal.y = tileY + yOffset;
     goal.exists = true;
@@ -316,6 +283,7 @@ void Coverage::publishGoal(int tileY, int tileX, Goal goal) {
 
   m_pathPub.publish(m_coveredPath);
 
+  /*
   geometry_msgs::PoseStamped startPose;
   startPose.header.stamp = ros::Time::now();
   startPose.header.frame_id = "map";
@@ -338,6 +306,7 @@ void Coverage::publishGoal(int tileY, int tileX, Goal goal) {
   di.start = startPose;
   di.end = goalPose;
   m_dubinPub.publish(di);
+  */
 }
 
 }  // namespace otter_coverage
