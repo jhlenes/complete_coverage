@@ -16,50 +16,32 @@ class Partition {
     Status status;
   };
   struct Point {
-    int col;
-    int row;
+    int gx;
+    int gy;
   };
   Partition();
   Partition(ros::NodeHandle nh);
-
   void initialize(double x0, double y0, double x1, double y1, double cellSize,
                   double scanRange);
-
   void drawPartition();
-
   void update(const nav_msgs::OccupancyGrid& map, double x, double y);
-
-  void gridToWorld(int col, int row, double& x, double& y);
-
-  void worldToGrid(double x, double y, int& col, int& row);
-
-  Status getStatus(int col, int row) { return m_cells[col][row].status; }
-
-  void setStatus(int col, int row, Status status) {
-    m_cells[col][row].status = status;
-  }
-
-  bool isCovered(int col, int row) { return m_cells[col][row].isCovered; }
-
-  void setCovered(int col, int row, bool isCovered) {
-    m_cells[col][row].isCovered = isCovered;
-  }
-
-  void getNeighbors(int col, int row, double dist,
-                    std::vector<Point>& neighbors);
-
+  void getNeighbors(int gx, int gy, double dist, std::vector<Point>& neighbors);
+  void gridToWorld(int gx, int gy, double& wx, double& wy);
+  void worldToGrid(double wx, double wy, int& gx, int& gy);
+  Status getStatus(int gx, int gy);
+  void setStatus(int gx, int gy, Status status);
+  bool isCovered(int gx, int gy);
+  void setCovered(int gx, int gy, bool isCovered);
+  int getWidth() const;
+  int getHeight() const;
+  bool withinGridBounds(int gx, int gy);
+  bool withinWorldBounds(double wx, double wy);
   bool hasCompleteCoverage();
 
-  int getNumColumns() const;
-
-  int getNumRows() const;
-
  private:
-  void gridToLocal(int col, int row, double& x, double& y);
-
-  void localToGrid(double x, double y, int& col, int& row);
-
-  Status calcStatus(const nav_msgs::OccupancyGrid& map, int col, int row);
+  void gridToLocal(int gx, int gy, double& x, double& y);
+  void localToGrid(double x, double y, int& gx, int& gy);
+  Status calcStatus(const nav_msgs::OccupancyGrid& map, int gx, int gy);
 
   ros::NodeHandle m_nh;
   ros::Publisher m_pub;
@@ -70,14 +52,15 @@ class Partition {
   double m_y0;
   double m_x1;
   double m_y1;
+  int m_width;
+  int m_height;
 
-  int m_numColumns;
-  int m_numRows;
   double m_cellSize;
   double m_scanRange;
 
-  std::vector<std::vector<Cell>> m_cells;  // m_cells[column][row]
+  std::vector<std::vector<Cell>> m_grid;  // m_cells[gx][gy]
 };
 
 }  // namespace otter_coverage
+
 #endif

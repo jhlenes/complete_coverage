@@ -4,6 +4,10 @@
 
 namespace otter_coverage {
 
+double dist(double x0, double y0, double x1, double y1) {
+  return std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
+}
+
 Partition::Partition() {}
 
 Partition::Partition(ros::NodeHandle nh) : m_initialized(false) {
@@ -27,32 +31,24 @@ void Partition::initialize(double x0, double y0, double x1, double y1,
   m_cellSize = cellSize;
   m_scanRange = scanRange;
 
-  m_numColumns = static_cast<int>(std::ceil((x1 - x0) / cellSize));
-  m_numRows = static_cast<int>(std::ceil((y1 - y0) / cellSize));
-
-  ROS_INFO("rows: %d cols: %d", m_numRows, m_numColumns);
+  m_width = static_cast<int>(std::ceil((x1 - x0) / cellSize));
+  m_height = static_cast<int>(std::ceil((y1 - y0) / cellSize));
 
   // Initialize cells
-  std::vector<std::vector<Cell>> cells;
-  for (int col = 0; col < m_numColumns; col++) {
-    std::vector<Cell> column;
-    for (int row = 0; row < m_numRows; row++) {
-      Cell cell;
-      column.push_back(cell);
-    }
-    cells.push_back(column);
-  }
-  m_cells = cells;
+  std::vector<std::vector<Cell>> grid(m_width,
+                                      std::vector<Cell>(m_height, Cell()));
+  m_grid = grid;
 }
 
 void Partition::drawPartition() {
   if (!m_initialized) return;
-  visualization_msgs::MarkerArray ma;
+
+  visualization_msgs::MarkerArray markerArray;
   int id = 0;
-  for (int col = 0; col < m_numColumns; col++) {
-    for (int row = 0; row < m_numRows; row++) {
-      double x, y;
-      gridToWorld(col, row, x, y);
+  for (int gx = 0; gx < m_width; gx++) {
+    for (int gy = 0; gy < m_height; gy++) {
+      double wx, wy;
+      gridToWorld(gx, gy, wx, wy);
 
       visualization_msgs::Marker marker;
       marker.header.frame_id = "map";
@@ -61,27 +57,27 @@ void Partition::drawPartition() {
       marker.id = id++;
       marker.type = visualization_msgs::Marker::CUBE;
       marker.action = visualization_msgs::Marker::ADD;
-      marker.pose.position.x = x;
-      marker.pose.position.y = y;
+      marker.pose.position.x = wx;
+      marker.pose.position.y = wy;
       marker.scale.x = m_cellSize;
       marker.scale.y = m_cellSize;
       marker.scale.z = 0.01;
 
-      if (m_cells[col][row].status == Blocked) {
+      if (m_grid[gx][gy].status == Blocked) {
         marker.color.r = 1.0f;
         marker.color.g = 0.0f;
         marker.color.b = 0.0f;
-      } else if (m_cells[col][row].status == Free) {
+      } else if (m_grid[gx][gy].status == Free) {
         marker.color.r = 0.0f;
         marker.color.g = 1.0f;
         marker.color.b = 1.0f;
       }
-      if (m_cells[col][row].status == Unknown) {
+      if (m_grid[gx][gy].status == Unknown) {
         marker.color.r = 0.0f;
         marker.color.g = 0.0f;
         marker.color.b = 1.0f;
       }
-      if (m_cells[col][row].isCovered) {
+      if (m_grid[gx][gy].isCovered) {
         marker.color.r = 0.0f;
         marker.color.g = 1.0f;
         marker.color.b = 0.0f;
@@ -89,60 +85,115 @@ void Partition::drawPartition() {
       marker.color.a = 0.1f;
 
       marker.lifetime = ros::Duration(0.0);
-      ma.markers.push_back(marker);
+      markerArray.markers.push_back(marker);
     }
   }
-  m_pub.publish(ma);
-}
-
-void Partition::getNeighbors(int col, int row, double dist,
-                             std::vector<Point> &neighbors) {
-  int maxCellDistance = static_cast<int>(std::ceil(dist / (m_cellSize)));
-
-  double x0, y0;
-  gridToWorld(col, row, x0, y0);
-
-  for (int i = -maxCellDistance; i <= maxCellDistance; i++) {
-    for (int j = -maxCellDistance; j <= maxCellDistance; j++) {
-      if (col + i < 0 || col + i >= m_numColumns || row + j < 0 ||
-          row + j >= m_numRows) {
-        continue;
-      }
-      double x1, y1;
-      gridToWorld(col + i, row + j, x1, y1);
-      if (std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2)) <= dist) {
-        neighbors.push_back({col + i, row + j});
-      }
-    }
-  }
+  m_pub.publish(markerArray);
 }
 
 // TODO: consider using costmap_2d from navigation to get smaller maps
-void Partition::update(const nav_msgs::OccupancyGrid &map, double x, double y) {
+void Partition::update(const nav_msgs::OccupancyGrid &map, double wx,
+                       double wy) {
   // Update the status of cells based on the map received in a region around the
   // position [x,y]
 
   drawPartition();
 
   // Current cell
-  int col, row;
-  worldToGrid(x, y, col, row);
+  int gx, gy;
+  worldToGrid(wx, wy, gx, gy);
 
   // Calculate status for all nearby cells
   std::vector<Point> neighbors;
-  getNeighbors(col, row, m_scanRange, neighbors);
+  getNeighbors(gx, gy, m_scanRange, neighbors);
   for (auto nb : neighbors) {
-    setStatus(nb.col, nb.row, calcStatus(map, nb.col, nb.row));
+    setStatus(nb.gx, nb.gy, calcStatus(map, nb.gx, nb.gy));
   }
 }
 
-unsigned int mapIndex(unsigned int x, unsigned int y, unsigned int width) {
+void Partition::getNeighbors(int gx, int gy, double distance,
+                             std::vector<Point> &neighbors) {
+  int maxGridDist = static_cast<int>(std::ceil(distance / (m_cellSize)));
+
+  double wx0, wy0;
+  gridToWorld(gx, gy, wx0, wy0);
+
+  for (int gxDelta = -maxGridDist; gxDelta <= maxGridDist; gxDelta++) {
+    for (int gyDelta = -maxGridDist; gyDelta <= maxGridDist; gyDelta++) {
+      // Neighbors must be in the grid
+      if (!withinGridBounds(gx + gxDelta, gy + gyDelta)) {
+        continue;
+      }
+
+      // Neighbors must be closer than dist from current cell
+      double wx1, wy1;
+      gridToWorld(gx + gxDelta, gy + gyDelta, wx1, wy1);
+      if (dist(wx0, wy0, wx1, wy1) <= distance) {
+        neighbors.push_back({gx + gxDelta, gy + gyDelta});
+      }
+    }
+  }
+}
+
+void Partition::gridToWorld(int gx, int gy, double &wx, double &wy) {
+  double lx;
+  double ly;
+  gridToLocal(gx, gy, lx, ly);
+  wx = lx + m_x0;
+  wy = ly + m_y0;
+}
+
+void Partition::worldToGrid(double wx, double wy, int &gx, int &gy) {
+  double lx = wx - m_x0;
+  double ly = wy - m_y0;
+  localToGrid(lx, ly, gx, gy);
+}
+
+Partition::Status Partition::getStatus(int gx, int gy) {
+  return m_grid[gx][gy].status;
+}
+
+void Partition::setStatus(int gx, int gy, Status status) {
+  m_grid[gx][gy].status = status;
+}
+
+bool Partition::isCovered(int gx, int gy) { return m_grid[gx][gy].isCovered; }
+
+void Partition::setCovered(int gx, int gy, bool isCovered) {
+  m_grid[gx][gy].isCovered = isCovered;
+}
+
+int Partition::getHeight() const { return m_height; }
+
+int Partition::getWidth() const { return m_width; }
+
+bool Partition::withinGridBounds(int gx, int gy) {
+  return gx >= 0 && gx < m_width && gy >= 0 && gy < m_height;
+}
+
+bool Partition::withinWorldBounds(double wx, double wy) {
+  return wx >= m_x0 && wx <= m_x1 && wy >= m_y0 && wy <= m_y1;
+}
+
+bool Partition::hasCompleteCoverage() {
+  // Any non-covered free cells?
+  for (auto column : m_grid) {
+    for (auto cell : column) {
+      if (!cell.isCovered && cell.status == Free) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+int mapIndex(int mx, int my, int width) {
   // OccupancyGrid uses row major order
-  return y * width + x;
+  return my * width + mx;
 }
 
 Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid &map,
-                                        int col, int row) {
+                                        int gx, int gy) {
   /* A cell in the partition contains many cells in the map. All
    * map cells in a partition cell are free => partition cell is free
    */
@@ -153,19 +204,17 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid &map,
 
   // Find position of partition cell in map frame
   double xWorld, yWorld;
-  gridToWorld(col, row, xWorld, yWorld);
+  gridToWorld(gx, gy, xWorld, yWorld);
 
   // Find x and y in map of lower right corner of surrounding square
-  unsigned int xMap =
-      static_cast<unsigned int>(((xWorld - m_cellSize / 2) - xOrigin) / mapRes);
-  unsigned int yMap =
-      static_cast<unsigned int>(((yWorld - m_cellSize / 2) - yOrigin) / mapRes);
+  int xMap = static_cast<int>(((xWorld - m_cellSize / 2) - xOrigin) / mapRes);
+  int yMap = static_cast<int>(((yWorld - m_cellSize / 2) - yOrigin) / mapRes);
 
   // Check if all map cells in the partition cell is free
   bool unknown = false;
-  for (unsigned int i = 0; i * mapRes < m_cellSize; i++) {
-    for (unsigned int j = 0; j * mapRes < m_cellSize; j++) {
-      unsigned int m = mapIndex(xMap + i, yMap + j, map.info.width);
+  for (int i = 0; i * mapRes < m_cellSize; i++) {
+    for (int j = 0; j * mapRes < m_cellSize; j++) {
+      int m = mapIndex(xMap + i, yMap + j, map.info.width);
 
       // Map not big enough
       if (xMap + i >= map.info.width || yMap + j >= map.info.height) {
@@ -193,50 +242,20 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid &map,
   return Free;
 }
 
-int Partition::getNumRows() const { return m_numRows; }
-
-int Partition::getNumColumns() const { return m_numColumns; }
-
-void Partition::gridToWorld(int col, int row, double &x, double &y) {
-  double xLocal;
-  double yLocal;
-  gridToLocal(col, row, xLocal, yLocal);
-  x = xLocal + m_x0;
-  y = yLocal + m_y0;
-}
-
-void Partition::worldToGrid(double x, double y, int &col, int &row) {
-  double xLocal = x - m_x0;
-  double yLocal = y - m_y0;
-  localToGrid(xLocal, yLocal, col, row);
-}
-
-void Partition::gridToLocal(int col, int row, double &x, double &y) {
-  if (col < 0 || col >= m_numColumns || row < 0 || row >= m_numRows)
+void Partition::gridToLocal(int gx, int gy, double &lx, double &ly) {
+  if (gx < 0 || gx >= m_width || gy < 0 || gy >= m_height)
     ROS_ERROR("gridToLocal: index out of bounds.");
 
-  x = (col + 0.5) * m_cellSize;
-  y = (row + 0.5) * m_cellSize;
+  lx = (gx + 0.5) * m_cellSize;
+  ly = (gy + 0.5) * m_cellSize;
 }
 
-void Partition::localToGrid(double x, double y, int &col, int &row) {
-  if (x < 0 || x >= m_x1 - m_x0 || y < 0 || y >= m_y1 - m_y0)
+void Partition::localToGrid(double lx, double ly, int &gx, int &gy) {
+  if (lx < 0 || lx >= m_x1 - m_x0 || ly < 0 || ly >= m_y1 - m_y0)
     ROS_ERROR("localToGrid: index out of bounds.");
 
-  col = static_cast<int>(std::floor(x / m_cellSize));
-  row = static_cast<int>(std::floor(y / m_cellSize));
-}
-
-bool Partition::hasCompleteCoverage() {
-  // Any non-covered free cells?
-  for (auto column : m_cells) {
-    for (auto cell : column) {
-      if (!cell.isCovered && cell.status == Free) {
-        return false;
-      }
-    }
-  }
-  return true;
+  gx = static_cast<int>(std::floor(lx / m_cellSize));
+  gy = static_cast<int>(std::floor(ly / m_cellSize));
 }
 
 }  // namespace otter_coverage
