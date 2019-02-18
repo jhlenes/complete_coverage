@@ -25,13 +25,23 @@ class Coverage {
   struct Goal {
     bool exists;
     bool isNew;
-    int x;
-    int y;
+    int gx;
+    int gy;
   };
 
-  struct tile {
-    int x;
-    int y;
+  struct Tile {
+    int gx;
+    int gy;
+  };
+
+  struct AStarNode {
+    AStarNode() : gx(-1), gy(-1), pgx(-1), pgy(-1) {}
+    AStarNode(int _gx, int _gy, int _pgx, int _pgy)
+        : gx(_gx), gy(_gy), pgx(_pgx), pgy(_pgy) {}
+    bool exists() { return gx != -1; }
+    int gx, gy;
+    int pgx, pgy;
+    double f, g, h;
   };
 
   void mapCallback(const nav_msgs::OccupancyGrid &m_grid);
@@ -48,6 +58,10 @@ class Coverage {
   bool isBacktrackingPoint(int i, int j);
   void publishGoal(int tileY, int tileX, Goal goal);
   double dist(double x0, double y0, double x1, double y1);
+  std::vector<Tile> aStarSearch(Tile from, Tile to);
+  void aStarNeighbor(AStarNode q, int dx, int dy,
+                     std::map<std::pair<int, int>, AStarNode> closed,
+                     std::map<std::pair<int, int>, AStarNode> &open);
 
   // ROS parameters
   double m_x0;
@@ -66,8 +80,10 @@ class Coverage {
   ros::Publisher m_goalPub;
   ros::Publisher m_pathPub;
   ros::Publisher m_dubinPub;
+  ros::Publisher m_astarPub;
 
   nav_msgs::Path m_coveredPath;
+  nav_msgs::Path m_astarPath;
 
   Pose m_pose;
 };

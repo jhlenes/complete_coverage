@@ -157,7 +157,12 @@ void Partition::setStatus(int gx, int gy, Status status) {
   m_grid[gx][gy].status = status;
 }
 
-bool Partition::isCovered(int gx, int gy) { return m_grid[gx][gy].isCovered; }
+bool Partition::isCovered(int gx, int gy) {
+  if (!withinGridBounds(gx, gy)) {
+    ROS_ERROR("isCovered: Not within bounds");
+  }
+  return m_grid[gx][gy].isCovered;
+}
 
 void Partition::setCovered(int gx, int gy, bool isCovered) {
   m_grid[gx][gy].isCovered = isCovered;
