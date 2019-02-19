@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 
+#include <coverage/a_star.h>
 #include <coverage/partition.h>
 
 #include <deque>
@@ -17,12 +18,6 @@ class Coverage
 {
 public:
   Coverage();
-
-  struct Tile
-  {
-    int gx;
-    int gy;
-  };
 
 private:
   struct Pose
@@ -41,19 +36,6 @@ private:
     int gy;
   };
 
-  struct AStarNode
-  {
-    AStarNode() : gx(-1), gy(-1), pgx(-1), pgy(-1) {}
-    AStarNode(int _gx, int _gy, int _pgx, int _pgy)
-        : gx(_gx), gy(_gy), pgx(_pgx), pgy(_pgy)
-    {
-    }
-    bool exists() { return gx != -1; }
-    int gx, gy;
-    int pgx, pgy;
-    double f, g, h;
-  };
-
   enum Direction
   {
     North,
@@ -68,20 +50,12 @@ private:
   void boustrophedonCoverage(int gx, int gy, Goal goal);
   Goal updateWPs(int gx, int gy);
   bool checkDirection(Direction dir, int gx, int gy);
-  bool isFree(int xTile, int yTile, bool allowUnknown);
-  bool locateBestBacktrackingPoint(int& goalX, int& goalY, int tileX,
-                                   int tileY);
+  bool isFree(int gx, int gy, bool allowUnknown);
+  bool locateBestBacktrackingPoint(int& goalX, int& goalY, int gx, int gy);
   bool blockedOrCovered(int gx, int gy);
   bool freeAndNotCovered(int gx, int gy);
-  bool isBacktrackingPoint(int i, int j);
-  void publishGoal(int tileX, int tileY, Goal goal);
-  double dist(double x0, double y0, double x1, double y1);
-  std::vector<Tile> aStarSearch(Tile from, Tile to);
-  void aStarNeighbor(AStarNode q, int dx, int dy,
-                     std::map<std::pair<int, int>, AStarNode> closed,
-                     std::map<std::pair<int, int>, AStarNode>& open);
-  std::vector<Tile> aStarSPT(Tile from, Tile to);
-  bool lineOfSight(Tile from, Tile to);
+  bool isBacktrackingPoint(int gx, int gy);
+  void publishGoal(int gx, int gy, Goal goal);
 
   bool m_mapInitialized;
 

@@ -20,13 +20,13 @@ catkin_package(
 )
 
 include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
+  include ${catkin_INCLUDE_DIRS}
 )
 
 
 ## Add nodes
 add_executable(coverage_node
+  include/coverage/a_star.h
   include/coverage/coverage.h
   include/coverage/partition.h
   src/coverage_node.cpp

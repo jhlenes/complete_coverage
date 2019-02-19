@@ -45,6 +45,10 @@ public:
   bool withinGridBounds(int gx, int gy);
   bool withinWorldBounds(double wx, double wy);
   bool hasCompleteCoverage();
+  double dist(double x0, double y0, double x1, double y1)
+  {
+    return std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
+  }
 
 private:
   void gridToLocal(int gx, int gy, double& x, double& y);

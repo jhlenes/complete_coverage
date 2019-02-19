@@ -15,11 +15,6 @@
 namespace otter_coverage
 {
 
-double Coverage::dist(double x0, double y0, double x1, double y1)
-{
-  return std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
-}
-
 Coverage::Coverage()
 {
   ros::NodeHandle nh;
@@ -141,7 +136,7 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       if (locateBestBacktrackingPoint(bpX, bpY, gx, gy))
       {
         ROS_INFO("Critical point! Backtracking...");
-        auto path = aStarSPT({gx, gy}, {bpX, bpY});
+        auto path = aStarSPT(m_partition, {gx, gy}, {bpX, bpY});
         for (Tile wp : path)
         {
           m_waypoints.push_back(wp);
@@ -173,7 +168,7 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
     // Check if waypoint is reached
     double goalX, goalY;
     m_partition.gridToWorld(goal.gx, goal.gy, goalX, goalY);
-    if (dist(goalX, goalY, m_pose.x, m_pose.y) < m_goalTolerance)
+    if (m_partition.dist(goalX, goalY, m_pose.x, m_pose.y) < m_goalTolerance)
     {
       m_partition.setCovered(goal.gx, goal.gy, true);
       goal.reached = true;
@@ -217,7 +212,7 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
     if (!goingToStart)
     {
       ROS_INFO("Going to start!");
-      auto path = aStarSearch({gx, gy}, {startX, startY});
+      auto path = aStarSearch(m_partition, {gx, gy}, {startX, startY});
       for (Tile wp : path)
       {
         m_waypoints.push_back(wp);
@@ -299,7 +294,8 @@ bool Coverage::locateBestBacktrackingPoint(int& goalX, int& goalY, int tileX,
       if (isBacktrackingPoint(gx, gy))
       {
         // TODO: change to A*SPT distance
-        int distance = int(aStarSearch({tileX, tileY}, {gx, gy}).size());
+        int distance =
+            int(aStarSearch(m_partition, {tileX, tileY}, {gx, gy}).size());
         if (distance < minDistance || minDistance < 0)
         {
           minDistance = distance;
@@ -400,272 +396,6 @@ void Coverage::publishGoal(int tileX, int tileY, Goal goal)
   di.end = goalPose;
   m_dubinPub.publish(di);
   */
-}
-
-std::vector<Coverage::Tile> Coverage::aStarSearch(Tile from, Tile to)
-{
-  typedef Coverage::AStarNode Node;
-
-  std::map<std::pair<int, int>, Node> open;
-  std::map<std::pair<int, int>, Node> closed;
-
-  open[{from.gx, from.gy}] = Node(from.gx, from.gy, from.gx, from.gy);
-
-  while (!open.empty())
-  {
-    // Pop tile with lowest f-value from open
-    std::pair<int, int> minPos = {-1, -1};
-    for (auto it = open.begin(); it != open.end(); it++)
-    {
-      if (minPos.first < 0 || it->second.f < open[minPos].f)
-      {
-        minPos = it->first;
-      }
-    }
-    Node q = open[minPos];
-    open.erase(minPos);
-
-    // Check if finished
-    if (q.gx == to.gx && q.gy == to.gy)
-    {
-      // Create path
-      std::vector<Coverage::Tile> reversePath;
-      reversePath.push_back({q.gx, q.gy});
-      // Add parent of each node to path.
-      Node node = q;
-      while (node.gx != from.gx || node.gy != from.gy)
-      {
-        reversePath.push_back({node.pgx, node.pgy});
-        node = closed[{node.pgx, node.pgy}];
-      }
-
-      std::vector<Coverage::Tile> path;
-      for (auto it = reversePath.rbegin(); it != reversePath.rend(); it++)
-      {
-        path.push_back(*it);
-      }
-      return path;
-    }
-
-    // Neighbors
-    aStarNeighbor(q, 1, 0, closed, open);
-    aStarNeighbor(q, -1, 0, closed, open);
-    aStarNeighbor(q, 0, 1, closed, open);
-    aStarNeighbor(q, 0, -1, closed, open);
-
-    // Push q to closed
-    closed[{q.gx, q.gy}] = q;
-  }
-
-  return std::vector<Coverage::Tile>(); // No path found
-}
-
-void Coverage::aStarNeighbor(AStarNode q, int dx, int dy,
-                             std::map<std::pair<int, int>, AStarNode> closed,
-                             std::map<std::pair<int, int>, AStarNode>& open)
-{
-  int ngx = q.gx + dx;
-  int ngy = q.gy + dy;
-  if (m_partition.withinGridBounds(ngx, ngy) && m_partition.isCovered(ngx, ngy))
-  {
-    Coverage::AStarNode node(ngx, ngy, q.gx, q.gy);
-    node.g = q.g + 1;
-    node.h = dist(node.gx, node.gy, node.pgx, node.pgy);
-    node.f = node.g + node.h;
-    try
-    {
-      if (open.at({ngx, ngy}).f < node.f)
-      {
-        return;
-      }
-    }
-    catch (std::out_of_range)
-    {
-    }
-    try
-    {
-      if (closed.at({ngx, ngy}).f < node.f)
-      {
-        return;
-      }
-    }
-    catch (std::out_of_range)
-    {
-    }
-
-    open[{node.gx, node.gy}] = node;
-  }
-}
-
-std::vector<Coverage::Tile> Coverage::aStarSPT(Tile from, Tile to)
-{
-  ROS_INFO("a*SPT:");
-  auto aStarPath = aStarSearch(from, to);
-  if (aStarPath.size() <= 2)
-  {
-    return aStarPath;
-  }
-  ROS_INFO_STREAM("a* length: " << aStarPath.size());
-  std::vector<Tile> smoothedPath = {aStarPath.front()};
-
-  int k = 0;
-  while (true)
-  {
-    for (auto it = aStarPath.rbegin(); it != aStarPath.rend(); it++)
-    {
-      if (lineOfSight(smoothedPath[k], *it))
-      {
-        smoothedPath.push_back(*it);
-        k++;
-        if (it == aStarPath.rbegin())
-        {
-          ROS_INFO_STREAM("a*SPT length: " << smoothedPath.size());
-
-          return smoothedPath;
-        }
-        else
-        {
-          break;
-        }
-      }
-    }
-  }
-
-  // Should not happen
-  return aStarPath;
-}
-
-bool Coverage::lineOfSight(Tile from, Tile to)
-{ // Algorithm: http://eugen.dedu.free.fr/projects/bresenham/
-  int x1 = from.gx;
-  int y1 = from.gy;
-  int x2 = to.gx;
-  int y2 = to.gy;
-
-  int i;              // loop counter
-  int ystep, xstep;   // the step on y and x axis
-  int error;          // the error accumulated during the increment
-  int errorprev;      // *vision the previous value of the error variable
-  int y = y1, x = x1; // the line points
-  int ddy, ddx;       // compulsory variables: the double values of dy and dx
-  int dx = x2 - x1;
-  int dy = y2 - y1;
-  if (m_partition.getStatus(x1, y1) != Partition::Free) // first point
-  {
-    return false;
-  }
-  // NB the last point can't be here, because of its previous point (which has
-  // to be verified)
-  if (dy < 0)
-  {
-    ystep = -1;
-    dy = -dy;
-  }
-  else
-    ystep = 1;
-  if (dx < 0)
-  {
-    xstep = -1;
-    dx = -dx;
-  }
-  else
-    xstep = 1;
-  ddy = 2 * dy; // work with double values for full precision
-  ddx = 2 * dx;
-  if (ddx >= ddy) // first octant (0 <= slope <= 1)
-
-  {
-    // compulsory initialization (even for errorprev, needed when dx==dy)
-    errorprev = error = dx; // start in the middle of the square
-    for (i = 0; i < dx; i++)
-    { // do not use the first point (already done)
-      x += xstep;
-      error += ddy;
-      if (error > ddx)
-      { // increment y if AFTER the middle ( > )
-        y += ystep;
-        error -= ddx;
-        // three cases (octant == right->right-top for directions below):
-        if (error + errorprev < ddx) // bottom square also
-        {
-          if (m_partition.getStatus(x, y - ystep) != Partition::Free)
-          {
-            return false;
-          }
-        }
-        else if (error + errorprev > ddx) // left square also
-        {
-          if (m_partition.getStatus(x - xstep, y) != Partition::Free)
-          {
-            return false;
-          }
-        }
-        else // corner: bottom and left squares also
-        {
-          if (m_partition.getStatus(x, y - ystep) != Partition::Free)
-          {
-            return false;
-          }
-          if (m_partition.getStatus(x - xstep, y) != Partition::Free)
-          {
-            return false;
-          }
-        }
-      }
-      if (m_partition.getStatus(x, y) != Partition::Free)
-      {
-        return false;
-      }
-      errorprev = error;
-    }
-  }
-  else
-  { // the same as above
-    errorprev = error = dy;
-    for (i = 0; i < dy; i++)
-    {
-      y += ystep;
-      error += ddx;
-      if (error > ddy)
-      {
-        x += xstep;
-        error -= ddy;
-        if (error + errorprev < ddy)
-        {
-          if (m_partition.getStatus(x - xstep, y) != Partition::Free)
-          {
-            return false;
-          }
-        }
-        else if (error + errorprev > ddy)
-        {
-          if (m_partition.getStatus(x, y - ystep) != Partition::Free)
-          {
-            return false;
-          }
-        }
-        else
-        {
-          if (m_partition.getStatus(x - xstep, y) != Partition::Free)
-          {
-            return false;
-          }
-          if (m_partition.getStatus(x, y - ystep) != Partition::Free)
-          {
-            return false;
-          }
-        }
-      }
-      if (m_partition.getStatus(x, y) != Partition::Free)
-      {
-        return false;
-      }
-      errorprev = error;
-    }
-  }
-  // assert ((y == y2) && (x == x2));  // the last point (y2,x2) has to be the
-  // same with the last point of the algorithm
-  return true;
 }
 
 } // namespace otter_coverage
