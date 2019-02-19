@@ -10,7 +10,7 @@
     <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
         type="cartographer_occupancy_grid_node" args="-resolution 0.10" />
 
-    <node name="map_processing_node" pkg="coverage_boustrophedon" type="map_processing_node" output="screen">
+    <node name="map_inflating_node" pkg="map_inflating" type="map_inflating_node" output="screen">
         <param name="inflation_radius" value="2.0" />
     </node>
 
@@ -36,6 +36,6 @@
 
     <!-- Visualize in rviz -->
     <node name="rviz" pkg="rviz" type="rviz" required="true"
-        args="-d $(find coverage_binn)/cfg/binn.rviz" />
+        args="-d $(find coverage_binn)/config/binn.rviz" />
 
 </launch>

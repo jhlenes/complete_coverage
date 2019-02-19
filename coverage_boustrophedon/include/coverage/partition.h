@@ -5,17 +5,26 @@
 #include <ros/ros.h>
 #include <vector>
 
-namespace otter_coverage {
+namespace otter_coverage
+{
 
-class Partition {
- public:
-  enum Status { Unknown, Free, Blocked };
-  struct Cell {
+class Partition
+{
+public:
+  enum Status
+  {
+    Unknown,
+    Free,
+    Blocked
+  };
+  struct Cell
+  {
     Cell() : isCovered(false), status(Unknown) {}
     bool isCovered;
     Status status;
   };
-  struct Point {
+  struct Point
+  {
     int gx;
     int gy;
   };
@@ -37,7 +46,7 @@ class Partition {
   bool withinWorldBounds(double wx, double wy);
   bool hasCompleteCoverage();
 
- private:
+private:
   void gridToLocal(int gx, int gy, double& x, double& y);
   void localToGrid(double x, double y, int& gx, int& gy);
   Status calcStatus(const nav_msgs::OccupancyGrid& map, int gx, int gy);
@@ -57,9 +66,9 @@ class Partition {
   double m_cellSize;
   double m_scanRange;
 
-  std::vector<std::vector<Cell>> m_grid;  // m_cells[gx][gy]
+  std::vector<std::vector<Cell>> m_grid; // m_cells[gx][gy]
 };
 
-}  // namespace otter_coverage
+} // namespace otter_coverage
 
 #endif

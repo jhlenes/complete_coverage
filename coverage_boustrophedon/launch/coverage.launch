@@ -1,6 +1,6 @@
 <launch>
 
-    <node name="map_processing_node" pkg="coverage_boustrophedon" type="map_processing_node" output="screen">
+    <node name="map_inflating_node" pkg="map_inflating" type="map_inflating_node" output="screen">
         <param name="inflation_radius" value="2.0" />
     </node>
 

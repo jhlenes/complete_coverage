@@ -5,22 +5,25 @@
 #include <nav_msgs/Path.h>
 #include <ros/ros.h>
 
-namespace otter_coverage {
+namespace otter_coverage
+{
 
-class Guidance {
- public:
+class Guidance
+{
+public:
   Guidance();
   ~Guidance();
 
- private:
+private:
   void newWaypoint(const geometry_msgs::PoseStamped& waypoint);
   void newPath(const nav_msgs::Path& path);
   void followPath(double x, double y, double psi);
 
-  struct Pose {
-      double x;
-      double y;
-      double psi;
+  struct Pose
+  {
+    double x;
+    double y;
+    double psi;
   };
 
   Pose m_pose;
@@ -40,6 +43,6 @@ class Guidance {
   double R = 1.0;
 };
 
-}  // namespace otter_coverage
+} // namespace otter_coverage
 
 #endif

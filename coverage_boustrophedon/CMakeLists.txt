@@ -2,16 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(coverage_boustrophedon)
 
 add_compile_options(-std=c++11)
-
-find_package(catkin REQUIRED COMPONENTS
-  otter_navigation
-  roscpp
-  tf2
-  tf2_ros
-  std_msgs
-  message_generation
-  geometry_msgs
-)
+find_package(catkin REQUIRED COMPONENTS otter_navigation roscpp tf2 tf2_ros std_msgs message_generation geometry_msgs map_inflating message_runtime)
 
 add_message_files(
   FILES
@@ -54,16 +45,6 @@ add_executable(guidance_node
 )
 add_dependencies(guidance_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(guidance_node
-  ${catkin_LIBRARIES}
-)
-
-add_executable(map_processing_node
-  include/map_processing/map_processing.h
-  src/map_processing_node.cpp
-  src/map_processing.cpp
-)
-add_dependencies(map_processing_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(map_processing_node
   ${catkin_LIBRARIES}
 )
 

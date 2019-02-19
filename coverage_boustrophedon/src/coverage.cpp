@@ -5,20 +5,23 @@
 #include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <math.h>
 #include <algorithm>
 #include <iostream>
 #include <map>
+#include <math.h>
 #include <queue>
 #include <vector>
 
-namespace otter_coverage {
+namespace otter_coverage
+{
 
-double Coverage::dist(double x0, double y0, double x1, double y1) {
+double Coverage::dist(double x0, double y0, double x1, double y1)
+{
   return std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
 }
 
-Coverage::Coverage() {
+Coverage::Coverage()
+{
   ros::NodeHandle nh;
   ros::NodeHandle nhP("~");
 
@@ -49,24 +52,32 @@ Coverage::Coverage() {
   mainLoop(nh);
 }
 
-void Coverage::mapCallback(const nav_msgs::OccupancyGrid &grid) {
+void Coverage::mapCallback(const nav_msgs::OccupancyGrid& grid)
+{
   m_partition.update(grid, m_pose.x, m_pose.y);
-  if (!m_mapInitialized) m_mapInitialized = true;
+  if (!m_mapInitialized)
+  {
+    m_mapInitialized = true;
+  }
 }
 
-void Coverage::mainLoop(ros::NodeHandle nh) {
+void Coverage::mainLoop(ros::NodeHandle nh)
+{
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
 
   ros::Rate rate(5.0);
-  while (nh.ok()) {
-    if (!updatePose(tfBuffer)) {
+  while (nh.ok())
+  {
+    if (!updatePose(tfBuffer))
+    {
       ROS_WARN("Transform from map to base_link not found.");
       ros::Duration(1.0).sleep();
       continue;
     }
 
-    if (m_mapInitialized) {
+    if (m_mapInitialized)
+    {
       // Find grid cell where robot is located
       int gx, gy;
       m_partition.worldToGrid(m_pose.x, m_pose.y, gx, gy);
@@ -81,12 +92,16 @@ void Coverage::mainLoop(ros::NodeHandle nh) {
   }
 }
 
-bool Coverage::updatePose(const tf2_ros::Buffer &tfBuffer) {
+bool Coverage::updatePose(const tf2_ros::Buffer& tfBuffer)
+{
   geometry_msgs::TransformStamped tfStamped;
-  try {
+  try
+  {
     tfStamped = tfBuffer.lookupTransform("map", "base_link", ros::Time(0.0),
                                          ros::Duration(1.0));
-  } catch (tf2::TransformException &ex) {
+  }
+  catch (tf2::TransformException& ex)
+  {
     ROS_WARN("%s", ex.what());
     return false;
   }
@@ -98,24 +113,37 @@ bool Coverage::updatePose(const tf2_ros::Buffer &tfBuffer) {
   return true;
 }
 
-void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal) {
-  if (goal.reached) {
+void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
+{
+  if (goal.reached)
+  {
     // Check to find the next target in north-south-east-west priority.
-    if (checkDirection(North, gx, gy)) {
+    if (checkDirection(North, gx, gy))
+    {
       m_waypoints.push_back({gx + 1, gy});
-    } else if (checkDirection(South, gx, gy)) {
+    }
+    else if (checkDirection(South, gx, gy))
+    {
       m_waypoints.push_back({gx - 1, gy});
-    } else if (checkDirection(East, gx, gy)) {
+    }
+    else if (checkDirection(East, gx, gy))
+    {
       m_waypoints.push_back({gx, gy - 1});
-    } else if (checkDirection(West, gx, gy)) {
+    }
+    else if (checkDirection(West, gx, gy))
+    {
       m_waypoints.push_back({gx, gy + 1});
-    } else {
+    }
+    else
+    {
       // If all directions are blocked, then a critical point has been reached
-      int bpx, bpy;
-      if (locateBestBacktrackingPoint(bpx, bpy, gx, gy)) {
+      int bpX, bpY;
+      if (locateBestBacktrackingPoint(bpX, bpY, gx, gy))
+      {
         ROS_INFO("Critical point! Backtracking...");
-        auto path = aStarSearch({gx, gy}, {bpx, bpy});
-        for (Tile wp : path) {
+        auto path = aStarSearch({gx, gy}, {bpX, bpY});
+        for (Tile wp : path)
+        {
           m_waypoints.push_back(wp);
         }
       }
@@ -123,7 +151,8 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal) {
   }
 }
 
-Coverage::Goal Coverage::updateWPs(int gx, int gy) {
+Coverage::Goal Coverage::updateWPs(int gx, int gy)
+{
   static const int startX = gx;
   static const int startY = gy;
   static bool initialized = false;
@@ -131,38 +160,44 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy) {
   static bool goalPublished = false;
 
   // Set initial grid position to covered
-  if (!initialized) {
+  if (!initialized)
+  {
     m_partition.setCovered(startX, startY, true);
     goal.reached = false;
     initialized = true;
   }
 
   // Has active waypoint
-  if (!goal.reached) {
+  if (!goal.reached)
+  {
     // Check if waypoint is reached
     double goalX, goalY;
     m_partition.gridToWorld(goal.gx, goal.gy, goalX, goalY);
-    if (dist(goalX, goalY, m_pose.x, m_pose.y) < m_goalTolerance) {
+    if (dist(goalX, goalY, m_pose.x, m_pose.y) < m_goalTolerance)
+    {
       m_partition.setCovered(goal.gx, goal.gy, true);
       goal.reached = true;
     }
 
     // Check if waypoint is blocked
-    if (m_partition.getStatus(goal.gx, goal.gy) == Partition::Blocked) {
+    if (m_partition.getStatus(goal.gx, goal.gy) == Partition::Blocked)
+    {
       ROS_INFO("Current waypoint is blocked. Searching for new... ");
       goal.reached = true;
     }
   }
 
   // Get new goal from list of waypoints
-  if (goal.reached && !m_waypoints.empty()) {
+  if (goal.reached && !m_waypoints.empty())
+  {
     goal = Goal(m_waypoints.front());
     m_waypoints.pop_front();
     goalPublished = false;
   }
 
   // Publish waypoint
-  if (!goalPublished) {
+  if (!goalPublished)
+  {
     publishGoal(gx, gy, goal);
     goalPublished = true;
     ROS_INFO_STREAM("Moving to +x: " << goal.gx - gx
@@ -172,16 +207,19 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy) {
   // Finished
   static bool finished = false;
   if (gx != startX && gy != startY && goal.reached && m_waypoints.empty() &&
-      m_partition.hasCompleteCoverage() && !finished) {
+      m_partition.hasCompleteCoverage() && !finished)
+  {
     ROS_INFO("Finished!");
     finished = true;
     static bool goingToStart = false;
 
     // Go to start
-    if (!goingToStart) {
+    if (!goingToStart)
+    {
       ROS_INFO("Going to start!");
       auto path = aStarSearch({gx, gy}, {startX, startY});
-      for (Tile wp : path) {
+      for (Tile wp : path)
+      {
         m_waypoints.push_back(wp);
       }
       goal = Goal(m_waypoints.front());
@@ -191,31 +229,37 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy) {
     }
   }
 
-  if (finished && !m_partition.hasCompleteCoverage()) {
+  if (finished && !m_partition.hasCompleteCoverage())
+  {
     finished = false;
   }
 
   return goal;
 }
 
-bool Coverage::blockedOrCovered(int gx, int gy) {
+bool Coverage::blockedOrCovered(int gx, int gy)
+{
   return m_partition.getStatus(gx, gy) != Partition::Free ||
          m_partition.isCovered(gx, gy);
 }
 
-bool Coverage::freeAndNotCovered(int gx, int gy) {
+bool Coverage::freeAndNotCovered(int gx, int gy)
+{
   return m_partition.getStatus(gx, gy) == Partition::Free &&
          !m_partition.isCovered(gx, gy);
 }
 
-bool Coverage::isBacktrackingPoint(int gx, int gy) {
-  if (!m_partition.isCovered(gx, gy)) {
+bool Coverage::isBacktrackingPoint(int gx, int gy)
+{
+  if (!m_partition.isCovered(gx, gy))
+  {
     return false;
   }
 
   // b(s1,s8) or b(s1,s2)
   bool eastBP = false;
-  if (gy - 1 >= 0) {
+  if (gy - 1 >= 0)
+  {
     eastBP =
         freeAndNotCovered(gx, gy - 1) &&
         (blockedOrCovered(gx + 1, gy - 1) || blockedOrCovered(gx - 1, gy - 1));
@@ -223,7 +267,8 @@ bool Coverage::isBacktrackingPoint(int gx, int gy) {
 
   // b(s5,s6) or b(s5,s4)
   bool westBP = false;
-  if (gy + 1 < m_partition.getHeight()) {
+  if (gy + 1 < m_partition.getHeight())
+  {
     westBP =
         freeAndNotCovered(gx, gy + 1) &&
         (blockedOrCovered(gx + 1, gy + 1) || blockedOrCovered(gx - 1, gy + 1));
@@ -231,7 +276,8 @@ bool Coverage::isBacktrackingPoint(int gx, int gy) {
 
   // b(s7,s6) or b(s7,s8)
   bool southBP = false;
-  if (gx - 1 >= 0) {
+  if (gx - 1 >= 0)
+  {
     southBP =
         freeAndNotCovered(gx - 1, gy) &&
         (blockedOrCovered(gx - 1, gy + 1) || blockedOrCovered(gx - 1, gy - 1));
@@ -242,15 +288,20 @@ bool Coverage::isBacktrackingPoint(int gx, int gy) {
   return eastBP || westBP || southBP;
 }
 
-bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
-                                           int tileY) {
+bool Coverage::locateBestBacktrackingPoint(int& goalX, int& goalY, int tileX,
+                                           int tileY)
+{
   int minDistance = -1;
-  for (int gx = 0; gx < m_partition.getWidth(); gx++) {
-    for (int gy = 0; gy < m_partition.getHeight(); gy++) {
-      if (isBacktrackingPoint(gx, gy)) {
+  for (int gx = 0; gx < m_partition.getWidth(); gx++)
+  {
+    for (int gy = 0; gy < m_partition.getHeight(); gy++)
+    {
+      if (isBacktrackingPoint(gx, gy))
+      {
         // TODO: change to A*SPT distance
         int distance = int(aStarSearch({tileX, tileY}, {gx, gy}).size());
-        if (distance < minDistance || minDistance < 0) {
+        if (distance < minDistance || minDistance < 0)
+        {
           minDistance = distance;
           goalX = gx;
           goalY = gy;
@@ -259,38 +310,43 @@ bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
     }
   }
 
-  if (minDistance < 0) return false;
+  if (minDistance < 0)
+    return false;
 
   return true;
 }
 
-bool Coverage::checkDirection(Direction dir, int gx, int gy) {
+bool Coverage::checkDirection(Direction dir, int gx, int gy)
+{
   int xOffset, yOffset;
-  switch (dir) {
-    case North:
-      xOffset = 1;
-      yOffset = 0;
-      break;
-    case South:
-      xOffset = -1;
-      yOffset = 0;
-      break;
-    case East:
-      xOffset = 0;
-      yOffset = -1;
-      break;
-    case West:
-      xOffset = 0;
-      yOffset = 1;
-      break;
+  switch (dir)
+  {
+  case North:
+    xOffset = 1;
+    yOffset = 0;
+    break;
+  case South:
+    xOffset = -1;
+    yOffset = 0;
+    break;
+  case East:
+    xOffset = 0;
+    yOffset = -1;
+    break;
+  case West:
+    xOffset = 0;
+    yOffset = 1;
+    break;
   }
-  if (!m_partition.withinGridBounds(gx + xOffset, gy + yOffset)) {
+  if (!m_partition.withinGridBounds(gx + xOffset, gy + yOffset))
+  {
     return false;
   }
   return freeAndNotCovered(gx + xOffset, gy + yOffset);
 }
 
-void Coverage::publishGoal(int tileX, int tileY, Goal goal) {
+void Coverage::publishGoal(int tileX, int tileY, Goal goal)
+{
   geometry_msgs::PoseStamped goalPose;
 
   goalPose.header.stamp = ros::Time::now();
@@ -346,7 +402,8 @@ void Coverage::publishGoal(int tileX, int tileY, Goal goal) {
   */
 }
 
-std::vector<Coverage::Tile> Coverage::aStarSearch(Tile from, Tile to) {
+std::vector<Coverage::Tile> Coverage::aStarSearch(Tile from, Tile to)
+{
   typedef Coverage::AStarNode Node;
 
   std::map<std::pair<int, int>, Node> open;
@@ -354,11 +411,14 @@ std::vector<Coverage::Tile> Coverage::aStarSearch(Tile from, Tile to) {
 
   open[{from.gx, from.gy}] = Node(from.gx, from.gy, from.gx, from.gy);
 
-  while (!open.empty()) {
+  while (!open.empty())
+  {
     // Pop tile with lowest f-value from open
     std::pair<int, int> minPos = {-1, -1};
-    for (auto it = open.begin(); it != open.end(); it++) {
-      if (minPos.first < 0 || it->second.f < open[minPos].f) {
+    for (auto it = open.begin(); it != open.end(); it++)
+    {
+      if (minPos.first < 0 || it->second.f < open[minPos].f)
+      {
         minPos = it->first;
       }
     }
@@ -366,19 +426,22 @@ std::vector<Coverage::Tile> Coverage::aStarSearch(Tile from, Tile to) {
     open.erase(minPos);
 
     // Check if finished
-    if (q.gx == to.gx && q.gy == to.gy) {
+    if (q.gx == to.gx && q.gy == to.gy)
+    {
       // Create path
       std::vector<Coverage::Tile> reversePath;
       reversePath.push_back({q.gx, q.gy});
       // Add parent of each node to path.
       Node node = q;
-      while (node.gx != from.gx || node.gy != from.gy) {
+      while (node.gx != from.gx || node.gy != from.gy)
+      {
         reversePath.push_back({node.pgx, node.pgy});
         node = closed[{node.pgx, node.pgy}];
       }
 
       std::vector<Coverage::Tile> path;
-      for (auto it = reversePath.rbegin(); it != reversePath.rend(); it++) {
+      for (auto it = reversePath.rbegin(); it != reversePath.rend(); it++)
+      {
         path.push_back(*it);
       }
       return path;
@@ -394,37 +457,46 @@ std::vector<Coverage::Tile> Coverage::aStarSearch(Tile from, Tile to) {
     closed[{q.gx, q.gy}] = q;
   }
 
-  return std::vector<Coverage::Tile>();  // No path found
+  return std::vector<Coverage::Tile>(); // No path found
 }
 
 void Coverage::aStarNeighbor(AStarNode q, int dx, int dy,
                              std::map<std::pair<int, int>, AStarNode> closed,
-                             std::map<std::pair<int, int>, AStarNode> &open) {
+                             std::map<std::pair<int, int>, AStarNode>& open)
+{
   int ngx = q.gx + dx;
   int ngy = q.gy + dy;
-  if (m_partition.withinGridBounds(ngx, ngy) &&
-      m_partition.isCovered(ngx, ngy)) {
+  if (m_partition.withinGridBounds(ngx, ngy) && m_partition.isCovered(ngx, ngy))
+  {
     Coverage::AStarNode node(ngx, ngy, q.gx, q.gy);
     node.g = q.g + 1;
     node.h = dist(node.gx, node.gy, node.pgx, node.pgy);
     node.f = node.g + node.h;
 
-    try {
-      if (open.at({ngx, ngy}).f < node.f) {
+    try
+    {
+      if (open.at({ngx, ngy}).f < node.f)
+      {
         return;
       }
-    } catch (std::out_of_range) {
+    }
+    catch (std::out_of_range)
+    {
     }
 
-    try {
-      if (closed.at({ngx, ngy}).f < node.f) {
+    try
+    {
+      if (closed.at({ngx, ngy}).f < node.f)
+      {
         return;
       }
-    } catch (std::out_of_range) {
+    }
+    catch (std::out_of_range)
+    {
     }
 
     open[{node.gx, node.gy}] = node;
   }
 }
 
-}  // namespace otter_coverage
+} // namespace otter_coverage

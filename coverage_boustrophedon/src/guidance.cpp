@@ -7,15 +7,17 @@
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <math.h>
 #include <algorithm>
 #include <iostream>
+#include <math.h>
 #include <queue>
 #include <vector>
 
-namespace otter_coverage {
+namespace otter_coverage
+{
 
-Guidance::Guidance() {
+Guidance::Guidance()
+{
   ros::NodeHandle nh;
 
   ros::Subscriber waypointSub =
@@ -28,13 +30,17 @@ Guidance::Guidance() {
   tf2_ros::TransformListener tfListener(tfBuffer);
 
   ros::Rate rate(10.0);
-  while (nh.ok()) {
+  while (nh.ok())
+  {
     // get the pose of the robot in the map frame
     geometry_msgs::TransformStamped transformStamped;
-    try {
+    try
+    {
       transformStamped = tfBuffer.lookupTransform(
           "map", "base_link", ros::Time(0.0), ros::Duration(0.0));
-    } catch (tf2::TransformException &ex) {
+    }
+    catch (tf2::TransformException& ex)
+    {
       ROS_WARN("Transform from map to base_link not found.");
       continue;
     }
@@ -52,19 +58,22 @@ Guidance::Guidance() {
 
 Guidance::~Guidance() {}
 
-void Guidance::newWaypoint(const geometry_msgs::PoseStamped &waypoint) {
+void Guidance::newWaypoint(const geometry_msgs::PoseStamped& waypoint)
+{
   // Add new waypoint to the list of waypoints
   m_waypoints.poses.push_back(waypoint);
 
   // When we get two waypoints we can start to navigate
-  if (m_waypoints.poses.size() == 2) {
+  if (m_waypoints.poses.size() == 2)
+  {
     m_currentWp = 1;
   }
 }
 
-void Guidance::newPath(const nav_msgs::Path &path) { m_path = path; }
+void Guidance::newPath(const nav_msgs::Path& path) { m_path = path; }
 
-void Guidance::followPath(double x, double y, double psi) {
+void Guidance::followPath(double x, double y, double psi)
+{
 #if 0
     if (m_path.poses.size() == 0) {
     return;
@@ -92,7 +101,8 @@ void Guidance::followPath(double x, double y, double psi) {
 #endif
 
   // Not enough waypoints to navigate from
-  if (m_currentWp < 1 || m_currentWp >= m_waypoints.poses.size()) {
+  if (m_currentWp < 1 || m_currentWp >= m_waypoints.poses.size())
+  {
     // publish angle and speed
     geometry_msgs::Twist cmd_vel;
     cmd_vel.linear.x = 0.0;
@@ -119,7 +129,8 @@ void Guidance::followPath(double x, double y, double psi) {
   // switch waypoints if close enough
   if (std::pow(p1.pose.position.x - x, 2) +
           std::pow(p1.pose.position.y - y, 2) <
-      std::pow(R, 2)) {
+      std::pow(R, 2))
+  {
     m_currentWp++;
   }
 
@@ -128,10 +139,12 @@ void Guidance::followPath(double x, double y, double psi) {
 
   // calculate desired yaw rate
   double chi_err = chi_d - psi;
-  while (chi_err > PI) {
+  while (chi_err > PI)
+  {
     chi_err -= 2 * PI;
   }
-  while (chi_err < -PI) {
+  while (chi_err < -PI)
+  {
     chi_err += 2 * PI;
   }
   double r = std::min(chi_err, 1.0);
@@ -151,4 +164,4 @@ void Guidance::followPath(double x, double y, double psi) {
   this->m_cmdVelPub.publish(cmd_vel);
 }
 
-}  // namespace otter_coverage
+} // namespace otter_coverage
