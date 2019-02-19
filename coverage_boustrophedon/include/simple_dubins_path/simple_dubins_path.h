@@ -3,7 +3,7 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Path.h>
-#include <otter_coverage/DubinInput.h>
+#include <coverage_boustrophedon/DubinInput.h>
 #include <ros/ros.h>
 
 namespace otter_coverage {
@@ -20,7 +20,7 @@ class SimpleDubinsPath {
   enum Dir { Left = 1, Right = -1 };
 
   void onGoal(const geometry_msgs::PoseStamped& goal);
-  void onInput(const otter_coverage::DubinInput& input);
+  void onInput(const coverage_boustrophedon::DubinInput& input);
 
   Dir turningDirection(double x_q, double y_q, double theta_q, double x_n,
                        double y_n);

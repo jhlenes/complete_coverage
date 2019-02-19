@@ -1,7 +1,7 @@
 ﻿#include <coverage/coverage.h>
 
+#include <coverage_boustrophedon/DubinInput.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <otter_coverage/DubinInput.h>
 #include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -24,16 +24,16 @@ Coverage::Coverage() {
 
   // Get parameters
   m_x0 = nhP.param("x0", -15);
-  m_y0 = nhP.param("y0", -10);
-  m_x1 = nhP.param("x1", 15);
+  m_y0 = nhP.param("y0", -20);
+  m_x1 = nhP.param("x1", 20);
   m_y1 = nhP.param("y1", 10);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
   m_scanRange = nhP.param("scan_range", 10);
   m_goalTolerance = nhP.param("goal_tolerance", 1.0);
 
   // Set up partition
-  m_partition = Partition(nh);
-  m_partition.initialize(m_x0, m_y0, m_x1, m_y1, m_tileResolution, m_scanRange);
+  m_partition.initialize(nh, m_x0, m_y0, m_x1, m_y1, m_tileResolution,
+                         m_scanRange);
 
   // Set up subscribers
   ros::Subscriber sub =
@@ -43,7 +43,7 @@ Coverage::Coverage() {
   m_goalPub =
       nh.advertise<geometry_msgs::PoseStamped>("move_base_simple/goal", 1000);
   m_pathPub = nh.advertise<nav_msgs::Path>("covered_path", 1000);
-  m_dubinPub = nh.advertise<otter_coverage::DubinInput>(
+  m_dubinPub = nh.advertise<coverage_boustrophedon::DubinInput>(
       "simple_dubins_path/input", 1000);
 
   m_astarPub = nh.advertise<nav_msgs::Path>("a_star", 1000);
@@ -99,31 +99,6 @@ void Coverage::boustrophedonMotion() {
   // Find tile where robot is located
   int tileX, tileY;
   m_partition.worldToGrid(m_pose.x, m_pose.y, tileX, tileY);
-
-  /*
-  ROS_INFO("Calling");
-  std::vector<Tile> path = aStarSearch({tileX, tileY}, {tileX + 3, tileY+3});
-  ROS_INFO("Called");
-  ROS_INFO_STREAM("Path: " << path.size());
-  m_astarPath.poses.clear();
-  for (Tile tile : path) {
-    geometry_msgs::PoseStamped poseS;
-    poseS.header.stamp = ros::Time::now();
-    poseS.header.frame_id = "map";
-    double x, y;
-    m_partition.gridToWorld(tile.gx, tile.gy, x, y);
-    poseS.pose.position.x = x;
-    poseS.pose.position.y = y;
-    poseS.pose.position.z = 0.0;
-
-    m_astarPath.poses.push_back(poseS);
-  }
-
-  m_astarPath.header.stamp = ros::Time::now();
-  m_astarPath.header.frame_id = "map";
-  m_astarPub.publish(m_astarPath);
-  return;
- */
 
   static Goal goal = {true, true, tileX, tileY};
 

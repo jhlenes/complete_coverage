@@ -53,7 +53,7 @@ void SimpleDubinsPath::onGoal(const geometry_msgs::PoseStamped& goal) {
   }
 }
 
-void SimpleDubinsPath::onInput(const otter_coverage::DubinInput& input) {
+void SimpleDubinsPath::onInput(const coverage_boustrophedon::DubinInput& input) {
   nav_msgs::Path path;
   makePath(input.start, input.end, path);
   m_pathPub.publish(path);

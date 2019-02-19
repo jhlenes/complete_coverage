@@ -20,9 +20,8 @@ class Partition {
     int gy;
   };
   Partition();
-  Partition(ros::NodeHandle nh);
-  void initialize(double x0, double y0, double x1, double y1, double cellSize,
-                  double scanRange);
+  void initialize(ros::NodeHandle nh, double x0, double y0, double x1,
+                  double y1, double cellSize, double scanRange);
   void drawPartition();
   void update(const nav_msgs::OccupancyGrid& map, double x, double y);
   void getNeighbors(int gx, int gy, double dist, std::vector<Point>& neighbors);

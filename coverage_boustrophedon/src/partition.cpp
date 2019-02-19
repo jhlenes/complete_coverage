@@ -8,21 +8,17 @@ double dist(double x0, double y0, double x1, double y1) {
   return std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
 }
 
-Partition::Partition() {}
+Partition::Partition() : m_initialized(false) {}
 
-Partition::Partition(ros::NodeHandle nh) : m_initialized(false) {
-  ROS_INFO("Partition constructed.");
-
-  m_nh = nh;
-  m_pub = m_nh.advertise<visualization_msgs::MarkerArray>("cell_partition", 1);
-}
-
-void Partition::initialize(double x0, double y0, double x1, double y1,
-                           double cellSize, double scanRange) {
+void Partition::initialize(ros::NodeHandle nh, double x0, double y0, double x1,
+                           double y1, double cellSize, double scanRange) {
   // TODO: rotate coordinate system? so that rectangle doesn't need to be
   // aligned with x and y axis in map frame.
 
   m_initialized = true;
+
+  m_nh = nh;
+  m_pub = m_nh.advertise<visualization_msgs::MarkerArray>("cell_partition", 1);
 
   m_x0 = x0;
   m_y0 = y0;

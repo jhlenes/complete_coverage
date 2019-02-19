@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(otter_coverage)
+project(coverage_boustrophedon)
 
 add_compile_options(-std=c++11)
 
