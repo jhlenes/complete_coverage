@@ -198,16 +198,16 @@ void Coverage::checkGoal(Goal &goal) {
 }
 
 bool Coverage::blockedOrCovered(int gx, int gy) {
-  if (gx < 0 || gx >= m_partition.getWidth() || gy < 0 ||
-      gy >= m_partition.getHeight()) {
-    return false;
-  }
-  return (m_partition.getStatus(gx, gy) == Partition::Blocked) ||
+  return m_partition.getStatus(gx, gy) != Partition::Free ||
          m_partition.isCovered(gx, gy);
 }
 
+bool Coverage::freeAndNotCovered(int gx, int gy) {
+  return m_partition.getStatus(gx, gy) == Partition::Free &&
+         !m_partition.isCovered(gx, gy);
+}
+
 bool Coverage::isBacktrackingPoint(int gx, int gy) {
-  ROS_INFO("isBP: %d, %d", gx, gy);
   if (!m_partition.isCovered(gx, gy)) {
     return false;
   }
@@ -216,14 +216,15 @@ bool Coverage::isBacktrackingPoint(int gx, int gy) {
   bool eastBP = false;
   if (gy - 1 >= 0) {
     eastBP =
-        m_partition.getStatus(gx, gy - 1) == Partition::Free &&
+        freeAndNotCovered(gx, gy - 1) &&
         (blockedOrCovered(gx + 1, gy - 1) || blockedOrCovered(gx - 1, gy - 1));
   }
 
   // b(s5,s6) or b(s5,s4)
   bool westBP = false;
   if (gy + 1 < m_partition.getHeight()) {
-    m_partition.getStatus(gx, gy + 1) == Partition::Free &&
+    westBP =
+        freeAndNotCovered(gx, gy + 1) &&
         (blockedOrCovered(gx + 1, gy + 1) || blockedOrCovered(gx - 1, gy + 1));
   }
 
@@ -231,14 +232,11 @@ bool Coverage::isBacktrackingPoint(int gx, int gy) {
   bool southBP = false;
   if (gx - 1 >= 0) {
     southBP =
-        m_partition.getStatus(gx - 1, gy) == Partition::Free &&
+        freeAndNotCovered(gx - 1, gy) &&
         (blockedOrCovered(gx - 1, gy + 1) || blockedOrCovered(gx - 1, gy - 1));
   }
   // Note: north can not be a BP because of the north-south-east-west check
   // priority.
-
-  ROS_INFO_STREAM("east: " << eastBP << " west: " << westBP
-                           << " south: " << southBP);
 
   return eastBP || westBP || southBP;
 }
@@ -249,10 +247,8 @@ bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
   for (int gx = 0; gx < m_partition.getWidth(); gx++) {
     for (int gy = 0; gy < m_partition.getHeight(); gy++) {
       if (isBacktrackingPoint(gx, gy)) {
-        ROS_INFO("BP: %d, %d", gx, gy);
         // TODO: change to A*SPT distance
-        // dist(gx, gy, tileX, tileY);
-        int distance = aStarSearch({tileX, tileY}, {gx, gy}).size();
+        int distance = int(aStarSearch({tileX, tileY}, {gx, gy}).size());
         if (distance < minDistance || minDistance < 0) {
           minDistance = distance;
           goalX = gx;

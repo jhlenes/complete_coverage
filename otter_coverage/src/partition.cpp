@@ -150,21 +150,38 @@ void Partition::worldToGrid(double wx, double wy, int &gx, int &gy) {
 }
 
 Partition::Status Partition::getStatus(int gx, int gy) {
+  if (!withinGridBounds(gx, gy)) {
+    ROS_ERROR(
+        "Partition::getStatus() - Tried to access element outside partition.");
+    return Partition::Unknown;
+  }
   return m_grid[gx][gy].status;
 }
 
 void Partition::setStatus(int gx, int gy, Status status) {
+  if (!withinGridBounds(gx, gy)) {
+    ROS_ERROR(
+        "Partition::setStatus() - Tried to access element outside partition.");
+    return;
+  }
   m_grid[gx][gy].status = status;
 }
 
 bool Partition::isCovered(int gx, int gy) {
   if (!withinGridBounds(gx, gy)) {
-    ROS_ERROR("isCovered: Not within bounds");
+    ROS_ERROR(
+        "Partition::isCovered() - Tried to access element outside partition.");
+    return false;
   }
   return m_grid[gx][gy].isCovered;
 }
 
 void Partition::setCovered(int gx, int gy, bool isCovered) {
+  if (!withinGridBounds(gx, gy)) {
+    ROS_ERROR(
+        "Partition::setCovered() - Tried to access element outside partition.");
+    return;
+  }
   m_grid[gx][gy].isCovered = isCovered;
 }
 
