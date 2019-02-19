@@ -23,9 +23,9 @@ Coverage::Coverage() {
   ros::NodeHandle nhP("~");
 
   // Get parameters
-  m_x0 = nhP.param("x0", -15);
-  m_y0 = nhP.param("y0", -20);
-  m_x1 = nhP.param("x1", 20);
+  m_x0 = nhP.param("x0", -5);
+  m_y0 = nhP.param("y0", -10);
+  m_x1 = nhP.param("x1", 10);
   m_y1 = nhP.param("y1", 10);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
   m_scanRange = nhP.param("scan_range", 10);
@@ -45,8 +45,6 @@ Coverage::Coverage() {
   m_pathPub = nh.advertise<nav_msgs::Path>("covered_path", 1000);
   m_dubinPub = nh.advertise<coverage_boustrophedon::DubinInput>(
       "simple_dubins_path/input", 1000);
-
-  m_astarPub = nh.advertise<nav_msgs::Path>("a_star", 1000);
 
   mainLoop(nh);
 }
@@ -68,7 +66,15 @@ void Coverage::mainLoop(ros::NodeHandle nh) {
       continue;
     }
 
-    boustrophedonMotion();
+    if (m_mapInitialized) {
+      // Find grid cell where robot is located
+      int gx, gy;
+      m_partition.worldToGrid(m_pose.x, m_pose.y, gx, gy);
+
+      Goal goal = updateWPs(gx, gy);
+
+      boustrophedonCoverage(gx, gy, goal);
+    }
 
     ros::spinOnce();
     rate.sleep();
@@ -92,84 +98,104 @@ bool Coverage::updatePose(const tf2_ros::Buffer &tfBuffer) {
   return true;
 }
 
-void Coverage::boustrophedonMotion() {
-  // We need to wait until we have a map
-  if (!m_mapInitialized) return;
-
-  // Find tile where robot is located
-  int tileX, tileY;
-  m_partition.worldToGrid(m_pose.x, m_pose.y, tileX, tileY);
-
-  static Goal goal = {true, true, tileX, tileY};
-
-  // When initializing, move to center of start tile
-  static bool initialized = false;
-  if (!initialized) {
-    publishGoal(tileY, tileX, goal);
-    initialized = true;
-  }
-
-  // We want to go back to the start once we are finished
-  static const int startX = tileX;
-  static const int startY = tileY;
-  static bool finished = false;
-
-  checkGoal(goal);
-
-  // Check to find the next tile in north-south-east-west priority.
-  checkDirection(1, 0, tileX, tileY, goal);
-  checkDirection(-1, 0, tileX, tileY, goal);
-  checkDirection(0, -1, tileX, tileY, goal);
-  checkDirection(0, 1, tileX, tileY, goal);
-
-  // A new goal has been given manually
-  if (finished && goal.isNew) {
-    finished = false;
-  }
-
-  // If all directions are blocked, then the critical point has been reached
-  if (!goal.exists) {
-    if (locateBestBacktrackingPoint(goal.gx, goal.gy, tileX, tileY)) {
-      ROS_INFO("Critical point! Backtracking...");
-      goal.exists = true;
-      goal.isNew = true;
+void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal) {
+  if (goal.reached) {
+    // Check to find the next target in north-south-east-west priority.
+    if (checkDirection(North, gx, gy)) {
+      m_waypoints.push_back({gx + 1, gy});
+    } else if (checkDirection(South, gx, gy)) {
+      m_waypoints.push_back({gx - 1, gy});
+    } else if (checkDirection(East, gx, gy)) {
+      m_waypoints.push_back({gx, gy - 1});
+    } else if (checkDirection(West, gx, gy)) {
+      m_waypoints.push_back({gx, gy + 1});
     } else {
-      if (!finished) {
-        ROS_INFO("Finished! Going back to start...");
-        goal.gx = startX;
-        goal.gy = startY;
-        goal.exists = true;
-        goal.isNew = true;
-        finished = true;
+      // If all directions are blocked, then a critical point has been reached
+      int bpx, bpy;
+      if (locateBestBacktrackingPoint(bpx, bpy, gx, gy)) {
+        ROS_INFO("Critical point! Backtracking...");
+        auto path = aStarSearch({gx, gy}, {bpx, bpy});
+        for (Tile wp : path) {
+          m_waypoints.push_back(wp);
+        }
       }
     }
   }
-
-  if (goal.isNew) {
-    goal.isNew = false;
-    publishGoal(tileY, tileX, goal);
-  }
 }
 
-void Coverage::checkGoal(Goal &goal) {
-  if (goal.exists) {
-    // Check if the robot is within a circle of acceptance
-    geometry_msgs::PoseStamped goalPose = m_coveredPath.poses.back();
-    if (std::sqrt(std::pow(goalPose.pose.position.x - m_pose.x, 2) +
-                  std::pow(goalPose.pose.position.y - m_pose.y, 2)) <
-        m_goalTolerance) {
-      goal.exists = false;
-      goal.isNew = false;
-      m_partition.setCovered(goal.gx, goal.gy, true);
+Coverage::Goal Coverage::updateWPs(int gx, int gy) {
+  static const int startX = gx;
+  static const int startY = gy;
+  static bool initialized = false;
+  static Goal goal({startX, startY});
+  static bool goalPublished = false;
 
-      // Check if goal is blocked
-    } else if (m_partition.getStatus(goal.gx, goal.gy) == Partition::Blocked) {
+  // Set initial grid position to covered
+  if (!initialized) {
+    m_partition.setCovered(startX, startY, true);
+    goal.reached = false;
+    initialized = true;
+  }
+
+  // Has active waypoint
+  if (!goal.reached) {
+    // Check if waypoint is reached
+    double goalX, goalY;
+    m_partition.gridToWorld(goal.gx, goal.gy, goalX, goalY);
+    if (dist(goalX, goalY, m_pose.x, m_pose.y) < m_goalTolerance) {
+      m_partition.setCovered(goal.gx, goal.gy, true);
+      goal.reached = true;
+    }
+
+    // Check if waypoint is blocked
+    if (m_partition.getStatus(goal.gx, goal.gy) == Partition::Blocked) {
       ROS_INFO("Current waypoint is blocked. Searching for new... ");
-      m_coveredPath.poses.erase(m_coveredPath.poses.end() - 1);
-      goal.exists = false;
-      goal.isNew = false;
+      goal.reached = true;
     }
   }
+
+  // Get new goal from list of waypoints
+  if (goal.reached && !m_waypoints.empty()) {
+    goal = Goal(m_waypoints.front());
+    m_waypoints.pop_front();
+    goalPublished = false;
+  }
+
+  // Publish waypoint
+  if (!goalPublished) {
+    publishGoal(gx, gy, goal);
+    goalPublished = true;
+    ROS_INFO_STREAM("Moving to +x: " << goal.gx - gx
+                                     << " +y: " << goal.gy - gy);
+  }
+
+  // Finished
+  static bool finished = false;
+  if (gx != startX && gy != startY && goal.reached && m_waypoints.empty() &&
+      m_partition.hasCompleteCoverage() && !finished) {
+    ROS_INFO("Finished!");
+    finished = true;
+    static bool goingToStart = false;
+
+    // Go to start
+    if (!goingToStart) {
+      ROS_INFO("Going to start!");
+      auto path = aStarSearch({gx, gy}, {startX, startY});
+      for (Tile wp : path) {
+        m_waypoints.push_back(wp);
+      }
+      goal = Goal(m_waypoints.front());
+      m_waypoints.pop_front();
+      goalPublished = false;
+      goingToStart = true;
+    }
+  }
+
+  if (finished && !m_partition.hasCompleteCoverage()) {
+    finished = false;
+  }
+
+  return goal;
 }
 
 bool Coverage::blockedOrCovered(int gx, int gy) {
@@ -238,26 +264,33 @@ bool Coverage::locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
   return true;
 }
 
-void Coverage::checkDirection(int xOffset, int yOffset, int tileX, int tileY,
-                              Goal &goal) {
-  if (goal.exists) return;
-  if (tileX + xOffset >= m_partition.getWidth() || tileX + xOffset < 0 ||
-      tileY + yOffset >= m_partition.getHeight() || tileY + yOffset < 0) {
-    return;
+bool Coverage::checkDirection(Direction dir, int gx, int gy) {
+  int xOffset, yOffset;
+  switch (dir) {
+    case North:
+      xOffset = 1;
+      yOffset = 0;
+      break;
+    case South:
+      xOffset = -1;
+      yOffset = 0;
+      break;
+    case East:
+      xOffset = 0;
+      yOffset = -1;
+      break;
+    case West:
+      xOffset = 0;
+      yOffset = 1;
+      break;
   }
-
-  if (!m_partition.isCovered(tileX + xOffset, tileY + yOffset) &&
-      m_partition.getStatus(tileX + xOffset, tileY + yOffset) ==
-          Partition::Free) {
-    ROS_INFO_STREAM("Moving to +x: " << xOffset << " +y: " << yOffset);
-    goal.gx = tileX + xOffset;
-    goal.gy = tileY + yOffset;
-    goal.exists = true;
-    goal.isNew = true;
+  if (!m_partition.withinGridBounds(gx + xOffset, gy + yOffset)) {
+    return false;
   }
+  return freeAndNotCovered(gx + xOffset, gy + yOffset);
 }
 
-void Coverage::publishGoal(int tileY, int tileX, Goal goal) {
+void Coverage::publishGoal(int tileX, int tileY, Goal goal) {
   geometry_msgs::PoseStamped goalPose;
 
   goalPose.header.stamp = ros::Time::now();
