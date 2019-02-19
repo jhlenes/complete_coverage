@@ -18,18 +18,18 @@ class Coverage
 public:
   Coverage();
 
+  struct Tile
+  {
+    int gx;
+    int gy;
+  };
+
 private:
   struct Pose
   {
     double x;
     double y;
     double psi;
-  };
-
-  struct Tile
-  {
-    int gx;
-    int gy;
   };
 
   struct Goal
@@ -80,6 +80,8 @@ private:
   void aStarNeighbor(AStarNode q, int dx, int dy,
                      std::map<std::pair<int, int>, AStarNode> closed,
                      std::map<std::pair<int, int>, AStarNode>& open);
+  std::vector<Tile> aStarSPT(Tile from, Tile to);
+  bool lineOfSight(Tile from, Tile to);
 
   bool m_mapInitialized;
 
