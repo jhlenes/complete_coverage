@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>otter_coverage</name>
+  <name>coverage_boustrophedon</name>
   <version>0.0.0</version>
-  <description>The otter_coverage package</description>
+  <description>The coverage_boustrophedon package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
