@@ -54,7 +54,8 @@ class Coverage {
   bool isFree(int xTile, int yTile, bool allowUnknown);
   bool locateBestBacktrackingPoint(int &goalX, int &goalY, int tileX,
                                    int tileY);
-  bool blockedOrCovered(int i, int j);
+  bool blockedOrCovered(int gx, int gy);
+  bool freeAndNotCovered(int gx, int gy);
   bool isBacktrackingPoint(int i, int j);
   void publishGoal(int tileY, int tileX, Goal goal);
   double dist(double x0, double y0, double x1, double y1);
