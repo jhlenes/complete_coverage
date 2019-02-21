@@ -267,8 +267,8 @@ static std::vector<Tile> aStarSPT(Partition partition, Tile from, Tile to)
   }
   std::vector<Tile> smoothedPath = {aStarPath.front()};
 
-  int k = 0;
-  while (true)
+  unsigned int k = 0;
+  for (unsigned int i = 0; i < aStarPath.size(); i++)
   {
     for (auto it = aStarPath.rbegin(); it != aStarPath.rend(); it++)
     {

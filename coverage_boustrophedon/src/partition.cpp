@@ -220,7 +220,7 @@ bool Partition::withinWorldBounds(double wx, double wy)
 
 bool Partition::hasCompleteCoverage()
 {
-  // Any non-covered free cells?
+  // Any non-covered free cells? => Not finished
   for (auto column : m_grid)
   {
     for (auto cell : column)
@@ -270,8 +270,6 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
       // Map not big enough
       if (xMap + i >= map.info.width || yMap + j >= map.info.height)
       {
-        // If partition cell also contains blocked cells, the status should be
-        // blocked. Therefore, flag.
         unknown = true;
       }
 
@@ -281,11 +279,11 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
         return Blocked;
       }
 
-      // Assuming free if unknown. Remove comment to set cell to unknown
-      // instead.
-      // Any unknown map cell if (map.data[m] < 0) {
-      //  unknown = true;
-      //}
+      // Any unknown map cell
+      if (map.data[m] < 0)
+      {
+        unknown = true;
+      }
     }
   }
 
