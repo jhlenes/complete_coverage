@@ -1,4 +1,5 @@
 ﻿#include <coverage/coverage.h>
+#include <simple_dubins_path/simple_dubins_path.h>
 
 #include <coverage_boustrophedon/DubinInput.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -351,55 +352,60 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
 
 void Coverage::publishGoal(int tileX, int tileY, Goal goal)
 {
-  geometry_msgs::PoseStamped goalPose;
+  static bool initialized;
+  static geometry_msgs::PoseStamped lastPose;
+  if (!initialized)
+  {
+    initialized = true;
+    geometry_msgs::PoseStamped startPose;
+    startPose.header.stamp = ros::Time::now();
+    startPose.header.frame_id = "map";
+    startPose.pose.position.x = m_pose.x;
+    startPose.pose.position.y = m_pose.y;
+    startPose.pose.position.z = 0.0;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, m_pose.psi);
+    startPose.pose.orientation.x = q.x();
+    startPose.pose.orientation.y = q.y();
+    startPose.pose.orientation.z = q.z();
+    startPose.pose.orientation.w = q.w();
+    lastPose = startPose;
+  };
 
+  // Publish goal
+  geometry_msgs::PoseStamped goalPose;
   goalPose.header.stamp = ros::Time::now();
   goalPose.header.frame_id = "map";
-
-  // set goal to middle of tile
   double x, y;
   m_partition.gridToWorld(goal.gx, goal.gy, x, y);
   goalPose.pose.position.x = x;
   goalPose.pose.position.y = y;
   goalPose.pose.position.z = 0.0;
-
-  double yaw = std::atan2(goal.gy - tileY, goal.gx - tileX);
+  double yaw =
+      std::atan2(y - lastPose.pose.position.y, x - lastPose.pose.position.x);
   tf2::Quaternion q;
   q.setRPY(0, 0, yaw);
-
   goalPose.pose.orientation.x = q.x();
   goalPose.pose.orientation.y = q.y();
   goalPose.pose.orientation.z = q.z();
   goalPose.pose.orientation.w = q.w();
-
   m_goalPub.publish(goalPose);
 
+  // Publish covered path
   m_coveredPath.header.stamp = ros::Time::now();
   m_coveredPath.header.frame_id = "map";
   m_coveredPath.poses.push_back(goalPose);
-
   m_pathPub.publish(m_coveredPath);
 
-  geometry_msgs::PoseStamped startPose;
-  startPose.header.stamp = ros::Time::now();
-  startPose.header.frame_id = "map";
-  // set pose to middle of tile
-  startPose.pose.position.x = m_pose.x;
-  startPose.pose.position.y = m_pose.y;
-  startPose.pose.position.z = 0.0;
-
-  q.setRPY(0, 0, m_pose.psi);
-  startPose.pose.orientation.x = q.x();
-  startPose.pose.orientation.y = q.y();
-  startPose.pose.orientation.z = q.z();
-  startPose.pose.orientation.w = q.w();
-
+  // Publish DubinInput
   coverage_boustrophedon::DubinInput di;
   di.header.stamp = ros::Time::now();
   di.header.frame_id = "map";
-  di.start = startPose;
+  di.start = lastPose;
   di.end = goalPose;
   m_dubinPub.publish(di);
+
+  lastPose = goalPose;
 }
 
 } // namespace otter_coverage

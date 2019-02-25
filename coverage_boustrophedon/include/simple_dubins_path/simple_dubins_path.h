@@ -18,6 +18,9 @@ public:
   bool makePath(const geometry_msgs::PoseStamped& start,
                 const geometry_msgs::PoseStamped& goal, nav_msgs::Path& path);
 
+  bool getTargetHeading(double x_q, double y_q, double theta_q, double x_n,
+                        double y_n, double& yawTarget);
+
 private:
   enum Dir
   {

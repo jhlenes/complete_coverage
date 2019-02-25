@@ -327,4 +327,33 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   return true;
 }
 
+bool SimpleDubinsPath::getTargetHeading(double x_q, double y_q, double theta_q,
+                                        double x_n, double y_n,
+                                        double& yawTarget)
+{
+  Dir dir = turningDirection(x_q, y_q, theta_q, x_n, y_n);
+
+  // Find the center of the turning circle
+  double x_cr, y_cr;
+  turningCenter(x_q, y_q, theta_q, x_n, y_n, x_cr, y_cr);
+
+  // Is target reachable?
+  if (std::sqrt(std::pow(x_n - x_cr, 2) + std::pow(y_n - y_cr, 2)) <
+      m_turningRadius)
+  {
+    return false;
+  }
+
+  // Find angle of tangent line from target to turning circle
+  double beta1, beta2;
+  tangentLine(x_n, y_n, x_cr, y_cr, beta1, beta2);
+
+  // Find tangent point
+  double x_lc, y_lc;
+  tangentPoint(x_q, y_q, x_n, y_n, x_cr, y_cr, beta1, beta2, dir, x_lc, y_lc);
+
+  yawTarget = std::atan2(y_n - y_lc, x_n - x_lc);
+  return true;
+}
+
 } // namespace otter_coverage
