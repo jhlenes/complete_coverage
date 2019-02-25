@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(coverage_boustrophedon)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 find_package(catkin REQUIRED COMPONENTS otter_navigation roscpp tf2 tf2_ros std_msgs message_generation geometry_msgs map_inflating message_runtime)
 
 add_message_files(

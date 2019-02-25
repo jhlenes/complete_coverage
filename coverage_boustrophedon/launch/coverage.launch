@@ -10,8 +10,8 @@
     </node>
 
     <node name="simple_dubins_path_node" pkg="coverage_boustrophedon" type="simple_dubins_path_node" output="screen">
-        <param name="turning_radius" value="1.5" />
-        <param name="path_resolution" value="0.05" />
+        <param name="turning_radius" value="0.75" />
+        <param name="path_resolution" value="0.10" />
     </node>
 
 </launch>

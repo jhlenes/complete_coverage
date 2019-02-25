@@ -12,12 +12,12 @@
     <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
         type="cartographer_occupancy_grid_node" args="-resolution 0.10" />
 
-    <node name="guidance_node" pkg="otter_coverage" type="guidance_node" output="screen">
+    <node name="guidance_node" pkg="coverage_boustrophedon" type="guidance_node" output="screen">
     </node>
 
     <!-- Visualize in rviz -->
     <node name="rviz" pkg="rviz" type="rviz" required="true"
-        args="-d $(find otter_coverage)/config/coverage.rviz" />
+        args="-d $(find coverage_boustrophedon)/config/coverage.rviz" />
 
     <!-- Convert Twist messages to Drive messages -->
     <node pkg="vmrc_gazebo" type="twist2thrust.py" name="twist2thrust" output="screen" args="--keyboard">

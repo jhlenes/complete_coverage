@@ -380,15 +380,12 @@ void Coverage::publishGoal(int tileX, int tileY, Goal goal)
 
   m_pathPub.publish(m_coveredPath);
 
-  /*
   geometry_msgs::PoseStamped startPose;
   startPose.header.stamp = ros::Time::now();
   startPose.header.frame_id = "map";
   // set pose to middle of tile
-  startPose.pose.position.x =
-      m_pose.x;  //(tileX + 0.5 - ORIGIN_X) * m_tile_resolution;
-  startPose.pose.position.y =
-      m_pose.y;  //(tileY + 0.5 - ORIGIN_Y) * m_tile_resolution;
+  startPose.pose.position.x = m_pose.x;
+  startPose.pose.position.y = m_pose.y;
   startPose.pose.position.z = 0.0;
 
   q.setRPY(0, 0, m_pose.psi);
@@ -397,13 +394,12 @@ void Coverage::publishGoal(int tileX, int tileY, Goal goal)
   startPose.pose.orientation.z = q.z();
   startPose.pose.orientation.w = q.w();
 
-  otter_coverage::DubinInput di;
+  coverage_boustrophedon::DubinInput di;
   di.header.stamp = ros::Time::now();
   di.header.frame_id = "map";
   di.start = startPose;
   di.end = goalPose;
   m_dubinPub.publish(di);
-  */
 }
 
 } // namespace otter_coverage

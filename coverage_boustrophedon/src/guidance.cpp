@@ -1,10 +1,11 @@
 #include <guidance/guidance.h>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Path.h>
 #include <ros/ros.h>
-#include <tf/tf.h>
+#include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <algorithm>
@@ -22,8 +23,10 @@ Guidance::Guidance()
 
   ros::Subscriber waypointSub =
       nh.subscribe("move_base_simple/goal", 1000, &Guidance::newWaypoint, this);
-  ros::Subscriber pathSub =
+
+  ros::Subscriber dubinsPathSub =
       nh.subscribe("simple_dubins_path", 1000, &Guidance::newPath, this);
+
   m_cmdVelPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
 
   tf2_ros::Buffer tfBuffer;
@@ -32,22 +35,21 @@ Guidance::Guidance()
   ros::Rate rate(10.0);
   while (nh.ok())
   {
-    // get the pose of the robot in the map frame
-    geometry_msgs::TransformStamped transformStamped;
+    // Get the pose of the robot in the map frame
+    geometry_msgs::TransformStamped tfStamped;
     try
     {
-      transformStamped = tfBuffer.lookupTransform(
-          "map", "base_link", ros::Time(0.0), ros::Duration(0.0));
+      tfStamped = tfBuffer.lookupTransform("map", "base_link", ros::Time(0.0),
+                                           ros::Duration(0.0));
     }
     catch (tf2::TransformException& ex)
     {
-      ROS_WARN("Transform from map to base_link not found.");
+      ROS_WARN("Transform from map to base_link not found: %s", ex.what());
       continue;
     }
-    double x = transformStamped.transform.translation.x;
-    double y = transformStamped.transform.translation.y;
-    double psi = tf::getYaw(transformStamped.transform.rotation);
-    m_pose = {x, y, psi};
+    double x = tfStamped.transform.translation.x;
+    double y = tfStamped.transform.translation.y;
+    double psi = tf2::getYaw(tfStamped.transform.rotation);
 
     followPath(x, y, psi);
 
@@ -74,32 +76,75 @@ void Guidance::newPath(const nav_msgs::Path& path) { m_path = path; }
 
 void Guidance::followPath(double x, double y, double psi)
 {
-#if 0
-    if (m_path.poses.size() == 0) {
+#if 1
+  // Finished?
+  if (m_path.poses.size() <= 1)
+  {
+    geometry_msgs::Twist cmd_vel;
+    cmd_vel.linear.x = 0.0;
+    cmd_vel.angular.z = 0.0;
+    m_cmdVelPub.publish(cmd_vel);
     return;
   }
 
   // Identify closest point on path
+  std::vector<geometry_msgs::PoseStamped>::iterator closest;
   double minDist = std::numeric_limits<double>::max();
-  typedef std::vector<double>::size_type sz;
-  sz minIndex = 0;
-  for (sz i = 0; i < m_path.poses.size(); i++) {
-    geometry_msgs::PoseStamped pose = m_path.poses[i];
-    double dist = std::sqrt(std::pow(m_pose.x - pose.pose.position.x, 2) +
-                            std::pow(m_pose.y - pose.pose.position.y, 2));
-    if (dist < minDist) {
-      minDist = dist;
-      minIndex = i;
-    }
+  for (auto it = m_path.poses.begin(); it != m_path.poses.end(); it++)
+  {
+    double dist = std::sqrt(std::pow(x - it->pose.position.x, 2) +
+                            std::pow(y - it->pose.position.y, 2));
+    if (dist < minDist)
+      closest = it;
   }
 
-  // Find setpoint on path
-  sz setpointIndex = minIndex + 20 * 1;
-  if (setpointIndex > m_path.poses.size()) {
-    setpointIndex = m_path.poses.size() - 1;
+  // Store closest
+  geometry_msgs::PoseStamped pose_d = *closest;
+
+  // Erase previous elements
+  //m_path.poses.erase(m_path.poses.begin(), closest);
+
+  // Path tangential angle
+  double gamma_p = tf2::getYaw(pose_d.pose.orientation);
+
+  // Cross-track error
+  double y_e = -(x - pose_d.pose.position.x) * std::sin(gamma_p) +
+               (y - pose_d.pose.position.y) * std::cos(gamma_p);
+
+  // velocity-path relative angle
+  double chi_r = std::atan(-y_e / DELTA);
+
+  // desired course angle
+  double chi_d = gamma_p + chi_r;
+
+  // calculate desired yaw rate
+  double chi_err = chi_d - psi;
+  while (chi_err > M_PI)
+  {
+    chi_err -= 2 * M_PI;
   }
+  while (chi_err < -M_PI)
+  {
+    chi_err += 2 * M_PI;
+  }
+  double r = std::min(chi_err, 1.0);
+  r = std::max(r, -1.0);
+
+  ROS_INFO_STREAM("PSI: " << psi);
+  ROS_INFO_STREAM("chi_d: " << chi_d);
+
+  // calculate desired speed
+  double u = 0.4 * (1 - std::abs(y_e) / 5 - std::abs(chi_err) / M_PI);
+  u = std::max(u, 0.1);
+
+  // publish angle and speed
+  geometry_msgs::Twist cmd_vel;
+  cmd_vel.linear.x = u;
+  cmd_vel.angular.z = r;
+  m_cmdVelPub.publish(cmd_vel);
 #endif
 
+#if 0
   // Not enough waypoints to navigate from
   if (m_currentWp < 1 || m_currentWp >= m_waypoints.poses.size())
   {
@@ -139,13 +184,13 @@ void Guidance::followPath(double x, double y, double psi)
 
   // calculate desired yaw rate
   double chi_err = chi_d - psi;
-  while (chi_err > PI)
+  while (chi_err > M_PI)
   {
-    chi_err -= 2 * PI;
+    chi_err -= 2 * M_PI;
   }
-  while (chi_err < -PI)
+  while (chi_err < -M_PI)
   {
-    chi_err += 2 * PI;
+    chi_err += 2 * M_PI;
   }
   double r = std::min(chi_err, 1.0);
   r = std::max(r, -1.0);
@@ -162,6 +207,7 @@ void Guidance::followPath(double x, double y, double psi)
   cmd_vel.linear.x = u;
   cmd_vel.angular.z = r;
   this->m_cmdVelPub.publish(cmd_vel);
+#endif
 }
 
 } // namespace otter_coverage
