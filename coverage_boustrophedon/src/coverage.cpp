@@ -234,12 +234,20 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
 
 bool Coverage::blockedOrCovered(int gx, int gy)
 {
+  if (!m_partition.withinGridBounds(gx, gy))
+  {
+    return true;
+  }
   return m_partition.getStatus(gx, gy) != Partition::Free ||
          m_partition.isCovered(gx, gy);
 }
 
 bool Coverage::freeAndNotCovered(int gx, int gy)
 {
+  if (!m_partition.withinGridBounds(gx, gy))
+  {
+    return false;
+  }
   return m_partition.getStatus(gx, gy) == Partition::Free &&
          !m_partition.isCovered(gx, gy);
 }

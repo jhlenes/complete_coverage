@@ -296,8 +296,8 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
 
 void Partition::gridToLocal(int gx, int gy, double& lx, double& ly)
 {
-  if (gx < 0 || gx >= m_width || gy < 0 || gy >= m_height)
-    ROS_ERROR("gridToLocal: index out of bounds.");
+  // if (gx < 0 || gx >= m_width || gy < 0 || gy >= m_height)
+  //  ROS_ERROR("gridToLocal: index out of bounds.");
 
   lx = (gx + 0.5) * m_cellSize;
   ly = (gy + 0.5) * m_cellSize;
@@ -305,8 +305,8 @@ void Partition::gridToLocal(int gx, int gy, double& lx, double& ly)
 
 void Partition::localToGrid(double lx, double ly, int& gx, int& gy)
 {
-  if (lx < 0 || lx >= m_x1 - m_x0 || ly < 0 || ly >= m_y1 - m_y0)
-    ROS_ERROR("localToGrid: index out of bounds.");
+  // if (lx < 0 || lx >= m_x1 - m_x0 || ly < 0 || ly >= m_y1 - m_y0)
+  //  ROS_ERROR("localToGrid: index out of bounds.");
 
   gx = static_cast<int>(std::floor(lx / m_cellSize));
   gy = static_cast<int>(std::floor(ly / m_cellSize));
