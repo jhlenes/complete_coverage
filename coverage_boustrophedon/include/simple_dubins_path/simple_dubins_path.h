@@ -33,8 +33,8 @@ private:
 
   Dir turningDirection(double x_q, double y_q, double theta_q, double x_n,
                        double y_n);
-  void turningCenter(double x_q, double y_q, double theta_q, double x_n,
-                     double y_n, double& x_cr, double& y_cr);
+  void turningCenter(double x_q, double y_q, double theta_q, double& x_cr,
+                     double& y_cr, Dir dir);
   void tangentLine(double x_n, double y_n, double x_cr, double y_cr,
                    double& beta1, double& beta2);
   void tangentPoint(double x_q, double y_q, double x_n, double y_n, double x_cr,

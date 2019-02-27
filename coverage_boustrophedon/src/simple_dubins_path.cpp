@@ -37,6 +37,8 @@ SimpleDubinsPath::~SimpleDubinsPath() {}
 
 void SimpleDubinsPath::onGoal(const geometry_msgs::PoseStamped& goal)
 {
+  ROS_ERROR("simple_dubins_path/goal is disabled.");
+  return;
   static geometry_msgs::PoseStamped start;
   static geometry_msgs::PoseStamped end;
   static int counter = 0;
@@ -70,8 +72,12 @@ void SimpleDubinsPath::onInput(const coverage_boustrophedon::DubinInput& input)
 SimpleDubinsPath::Dir SimpleDubinsPath::turningDirection(double x_q, double y_q,
                                                          double theta_q,
                                                          double x_n, double y_n)
+// Note: Prefers right turns when doing 180 turn (or going straight)
 {
   Dir turningDirection = Right;
+
+  // Rotate x-axis theta_q, and check if the new y-coordinate is on the left
+  // (positive)
   if (-(x_n - x_q) * sin(theta_q) + (y_n - y_q) * cos(theta_q) > 0)
   {
     turningDirection = Left;
@@ -80,21 +86,44 @@ SimpleDubinsPath::Dir SimpleDubinsPath::turningDirection(double x_q, double y_q,
 }
 
 void SimpleDubinsPath::turningCenter(double x_q, double y_q, double theta_q,
-                                     double x_n, double y_n, double& x_cr,
-                                     double& y_cr)
+                                     double& x_cr, double& y_cr, Dir dir)
+// Note: For compliance with previous assumption,
+// must prefer right turns when doing 180 turn (or going straight)
 {
   double x_cr1 = x_q + sin(theta_q) * m_turningRadius;
   double y_cr1 = y_q - cos(theta_q) * m_turningRadius;
   double x_cr2 = x_q - sin(theta_q) * m_turningRadius;
   double y_cr2 = y_q + cos(theta_q) * m_turningRadius;
 
-  x_cr = x_cr2;
-  y_cr = y_cr2;
-  if (std::pow(x_n - x_cr1, 2) + std::pow(y_n - y_cr1, 2) <
-      std::pow(x_n - x_cr2, 2) + std::pow(y_n - y_cr2, 2))
+  // Rotate x-axis theta_q, and check if the new y-coordinate of cr1 is on the
+  // left (positive)
+  if (-(x_cr1 - x_q) * sin(theta_q) + (y_cr1 - y_q) * cos(theta_q) > 0)
+  // cr1 is left turning point
   {
-    x_cr = x_cr1;
-    y_cr = y_cr1;
+    if (dir == Left)
+    {
+      x_cr = x_cr1;
+      y_cr = y_cr1;
+    }
+    else // dir == Right
+    {
+      x_cr = x_cr2;
+      y_cr = y_cr2;
+    }
+  }
+  else
+  // cr1 is right turning point
+  {
+    if (dir == Right)
+    {
+      x_cr = x_cr1;
+      y_cr = y_cr1;
+    }
+    else // dir == Left
+    {
+      x_cr = x_cr2;
+      y_cr = y_cr2;
+    }
   }
 }
 
@@ -207,13 +236,15 @@ void SimpleDubinsPath::tangentPoint(double x_q, double y_q, double x_n,
   }
   else if (dir == Right)
   {
-    if (angle1 > angle2)
+    if (angle1 > angle2 || abs(angle1) < epsilon) // angle == 0 is best
     {
       x_lc = x_lc1;
       y_lc = y_lc1;
       angle = angle1;
     }
   }
+
+  ROS_INFO_STREAM("a1: " << angle1 << " a2: " << angle2 << " a: " << angle);
 }
 
 void SimpleDubinsPath::generatePath(double x_q, double y_q, double x_n,
@@ -290,12 +321,19 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   double x_n = goal.pose.position.x;
   double y_n = goal.pose.position.y;
 
+  ROS_INFO_STREAM("x0: " << x_q << " y0: " << y_q << " theta0: " << theta_q);
+  ROS_INFO_STREAM("x1: " << x_n << " y1: " << y_n);
+
   Dir dir = turningDirection(x_q, y_q, theta_q, x_n, y_n);
+
+  ROS_INFO_STREAM("dir: " << (dir == Left ? "Left" : "Right"));
 
   // Find the center of the turning circle
   double x_cr;
   double y_cr;
-  turningCenter(x_q, y_q, theta_q, x_n, y_n, x_cr, y_cr);
+  turningCenter(x_q, y_q, theta_q, x_cr, y_cr, dir);
+
+  ROS_INFO_STREAM("x_cr: " << x_cr << " y_cr: " << y_cr);
 
   // Perform checks
   if (m_turningRadius >
@@ -321,6 +359,8 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   double y_lc;
   tangentPoint(x_q, y_q, x_n, y_n, x_cr, y_cr, beta1, beta2, dir, x_lc, y_lc);
 
+  ROS_INFO_STREAM("x_lc: " << x_lc << " y_lc: " << y_lc);
+
   // Generate path
   generatePath(x_q, y_q, x_n, y_n, x_cr, y_cr, x_lc, y_lc, dir, goal, path);
 
@@ -335,7 +375,7 @@ bool SimpleDubinsPath::getTargetHeading(double x_q, double y_q, double theta_q,
 
   // Find the center of the turning circle
   double x_cr, y_cr;
-  turningCenter(x_q, y_q, theta_q, x_n, y_n, x_cr, y_cr);
+  turningCenter(x_q, y_q, theta_q, x_cr, y_cr, dir);
 
   // Is target reachable?
   if (std::sqrt(std::pow(x_n - x_cr, 2) + std::pow(y_n - y_cr, 2)) <

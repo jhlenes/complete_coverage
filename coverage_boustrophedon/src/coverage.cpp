@@ -138,6 +138,7 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       {
         ROS_INFO("Critical point! Backtracking...");
         auto path = aStarSPT(m_partition, {gx, gy}, {bpX, bpY});
+        // TODO: Start and goal are added twice! remove this.
         for (Tile wp : path)
         {
           m_waypoints.push_back(wp);
@@ -352,7 +353,7 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
 
 void Coverage::publishGoal(int tileX, int tileY, Goal goal)
 {
-  static bool initialized;
+  static bool initialized = false;
   static geometry_msgs::PoseStamped lastPose;
   if (!initialized)
   {
