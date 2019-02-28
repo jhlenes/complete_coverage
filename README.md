@@ -7,7 +7,7 @@ This system will connect to several sensors. In order to know which sensor is at
 sudo cp rplidar.rules /etc/udev/rules.d
 sudo cp xsens.rules /etc/udev/rules.d
 ```
-Unplug and replug your devices, and you finished.
+Unplug and replug your devices, and you are finished.
 
 If you would like to add other sensors as well, you can find the ``` ATTRS{idVendor}``` and ```ATTRS{idProduct}``` with the ```lsusb``` command. If the names are cryptic, just unplug and replug your devices to see what is changing.
 
