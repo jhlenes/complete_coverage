@@ -78,6 +78,7 @@ private:
 
   Partition m_partition;
   Pose m_pose;
+  bool m_finished = false;
 };
 
 } // namespace otter_coverage

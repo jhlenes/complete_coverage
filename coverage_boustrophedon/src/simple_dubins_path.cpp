@@ -243,8 +243,6 @@ void SimpleDubinsPath::tangentPoint(double x_q, double y_q, double x_n,
       angle = angle1;
     }
   }
-
-  ROS_INFO_STREAM("a1: " << angle1 << " a2: " << angle2 << " a: " << angle);
 }
 
 void SimpleDubinsPath::generatePath(double x_q, double y_q, double x_n,
@@ -294,7 +292,8 @@ void SimpleDubinsPath::generatePath(double x_q, double y_q, double x_n,
 
   // generate straight line segment
   for (double i = 0;
-       std::abs(i * m_pathResolution * dx_norm - dx) > 2 * m_pathResolution;
+       std::fabs(i * m_pathResolution * dx_norm - dx) > 2 * m_pathResolution ||
+       std::fabs(i * m_pathResolution * dy_norm - dy) > 2 * m_pathResolution;
        ++i)
   {
     geometry_msgs::PoseStamped point;
@@ -321,19 +320,12 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   double x_n = goal.pose.position.x;
   double y_n = goal.pose.position.y;
 
-  ROS_INFO_STREAM("x0: " << x_q << " y0: " << y_q << " theta0: " << theta_q);
-  ROS_INFO_STREAM("x1: " << x_n << " y1: " << y_n);
-
   Dir dir = turningDirection(x_q, y_q, theta_q, x_n, y_n);
-
-  ROS_INFO_STREAM("dir: " << (dir == Left ? "Left" : "Right"));
 
   // Find the center of the turning circle
   double x_cr;
   double y_cr;
   turningCenter(x_q, y_q, theta_q, x_cr, y_cr, dir);
-
-  ROS_INFO_STREAM("x_cr: " << x_cr << " y_cr: " << y_cr);
 
   // Perform checks
   if (m_turningRadius >
@@ -358,8 +350,6 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   double x_lc;
   double y_lc;
   tangentPoint(x_q, y_q, x_n, y_n, x_cr, y_cr, beta1, beta2, dir, x_lc, y_lc);
-
-  ROS_INFO_STREAM("x_lc: " << x_lc << " y_lc: " << y_lc);
 
   // Generate path
   generatePath(x_q, y_q, x_n, y_n, x_cr, y_cr, x_lc, y_lc, dir, goal, path);

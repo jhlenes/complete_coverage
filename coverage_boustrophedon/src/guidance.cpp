@@ -10,7 +10,7 @@
 
 #include <algorithm>
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <queue>
 #include <vector>
 
@@ -75,6 +75,7 @@ void Guidance::newWaypoint(const geometry_msgs::PoseStamped& waypoint)
 void Guidance::newPath(const nav_msgs::Path& path) { m_path = path; }
 
 void Guidance::followPath(double x, double y, double psi)
+// TODO: cuts turns, how to fix?
 {
 #if 1
   // Finished?
@@ -111,8 +112,17 @@ void Guidance::followPath(double x, double y, double psi)
   double y_e = -(x - pose_d.pose.position.x) * std::sin(gamma_p) +
                (y - pose_d.pose.position.y) * std::cos(gamma_p);
 
+  // Time-varying lookahead distance
+  double delta_y_e = (delta_max -  delta_min) * std::exp(-delta_k * std::pow(y_e, 2)) + delta_min;
+  // if turning => small lookahead distance
+  if ((closest+1) != m_path.poses.end()) {
+      if (std::fabs(gamma_p - tf2::getYaw((*(closest+1)).pose.orientation)) < std::numeric_limits<double>::epsilon()) {
+          delta_y_e = delta_min;
+      }
+  }
+
   // velocity-path relative angle
-  double chi_r = std::atan(-y_e / DELTA);
+  double chi_r = std::atan(-y_e / delta_y_e);
 
   // desired course angle
   double chi_d = gamma_p + chi_r;
@@ -127,14 +137,11 @@ void Guidance::followPath(double x, double y, double psi)
   {
     chi_err += 2 * M_PI;
   }
-  double r = std::min(chi_err, 1.0);
-  r = std::max(r, -1.0);
-
-  ROS_INFO_STREAM("PSI: " << psi);
-  ROS_INFO_STREAM("chi_d: " << chi_d);
+  double r = std::min(chi_err, 0.8);
+  r = std::max(r, -0.8);
 
   // calculate desired speed
-  double u = 0.4 * (1 - std::abs(y_e) / 5 - std::abs(chi_err) / M_PI);
+  double u = 0.4 * (1 - std::abs(y_e) / 5 - std::abs(chi_err) / M_PI_2);
   u = std::max(u, 0.1);
 
   // publish angle and speed

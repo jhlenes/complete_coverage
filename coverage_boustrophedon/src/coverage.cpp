@@ -23,8 +23,8 @@ Coverage::Coverage()
 
   // Get parameters
   m_x0 = nhP.param("x0", -3);
-  m_y0 = nhP.param("y0", -18);
-  m_x1 = nhP.param("x1", 25);
+  m_y0 = nhP.param("y0", -6);
+  m_x1 = nhP.param("x1", 7);
   m_y1 = nhP.param("y1", 10);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
   m_scanRange = nhP.param("scan_range", 10);
@@ -138,11 +138,14 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       {
         ROS_INFO("Critical point! Backtracking...");
         auto path = aStarSPT(m_partition, {gx, gy}, {bpX, bpY});
-        // TODO: Start and goal are added twice! remove this.
-        for (Tile wp : path)
+        for (auto it = path.begin() + 1; it != path.end(); it++)
         {
-          m_waypoints.push_back(wp);
+          m_waypoints.push_back(*it);
         }
+      }
+      else
+      {
+        ROS_INFO("No critical point found!");
       }
     }
   }
@@ -159,8 +162,8 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
   // Set initial grid position to covered
   if (!initialized)
   {
-    m_partition.setCovered(startX, startY, true);
-    goal.reached = false;
+    // m_partition.setCovered(startX, startY, true);
+    goal.reached = true;
     initialized = true;
   }
 
@@ -203,7 +206,8 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
 
   // Finished
   static bool finished = false;
-  if (gx != startX && gy != startY && goal.reached && m_waypoints.empty() &&
+  // TODO: Figure out how not to be "finished" when in starting position
+  if ((gx != startX || gy != startY) && goal.reached && m_waypoints.empty() &&
       m_partition.hasCompleteCoverage() && !finished)
   {
     ROS_INFO("Finished!");
@@ -214,10 +218,10 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
     if (!goingToStart)
     {
       ROS_INFO("Going to start!");
-      auto path = aStarSearch(m_partition, {gx, gy}, {startX, startY});
-      for (Tile wp : path)
+      auto path = aStarSPT(m_partition, {gx, gy}, {startX, startY});
+      for (auto it = path.begin() + 1; it != path.end(); it++)
       {
-        m_waypoints.push_back(wp);
+        m_waypoints.push_back(*it);
       }
       goal = Goal(m_waypoints.front());
       m_waypoints.pop_front();

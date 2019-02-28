@@ -29,7 +29,12 @@ private:
   ros::Publisher m_cmdVelPub;
 
   // lookahead distance
-  double DELTA = 2.0;
+  double DELTA = 0.5;
+
+  // time-varying lookahead distance
+  double delta_max = 2.0;
+  double delta_min = 0.2;
+  double delta_k = 1.0;
 
   // circle of acceptance
   double R = 1.0;
