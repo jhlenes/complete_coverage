@@ -1,5 +1,5 @@
 TRAJECTORY_BUILDER_2D = {
-  use_imu_data = false,
+  use_imu_data = true,
   min_range = 0.15,
   max_range = 12.,
   min_z = -0.8,

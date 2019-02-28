@@ -23,7 +23,7 @@
   <!-- Start the Cartographer SLAM node -->
   <node name="cartographer_node" pkg="cartographer_ros"
     type="cartographer_node" args="
-    -configuration_directory $(find otter_slam)/config
+    -configuration_directory $(find otter_slam)/config_usv
     -configuration_basename otter.lua"
     output="screen">
   </node>

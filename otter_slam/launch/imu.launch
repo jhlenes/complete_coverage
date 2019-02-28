@@ -7,7 +7,7 @@
     <param name="baudrate"              type="int"    value="0"        />
     <param name="timeout"               type="double" value="0.002"    />
     <param name="initial_wait"          type="double" value="0.1"      />
-    <param name="no_rotation_duration"  type="double" value="10"    />
+    <param name="no_rotation_duration"  type="double" value="0"    />
     <param name="frame_id"              type="string" value="imu_link" />
     <param name="frame_local"           type="string" value="ENU"      />
     <!-- Optional: uses default from documentation
@@ -15,6 +15,7 @@
       linear_acceleration_covariance_diagonal
       orientation_covariance_diagonal
     -->
+    <remap from="/imu/data" to="/imu" />
   </node>
 
 </launch>
