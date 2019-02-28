@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+<launch>
+
+  <!-- Start driver for Xsens IMU -->
+  <node name="xsensNode" pkg="xsens_driver" type="mtnode.py" output="screen">
+    <param name="device"                type="string" value="/dev/xsens"     />
+    <param name="baudrate"              type="int"    value="0"        />
+    <param name="timeout"               type="double" value="0.002"    />
+    <param name="initial_wait"          type="double" value="0.1"      />
+    <param name="no_rotation_duration"  type="double" value="10"    />
+    <param name="frame_id"              type="string" value="imu_link" />
+    <param name="frame_local"           type="string" value="ENU"      />
+    <!-- Optional: uses default from documentation
+      angular_velocity_covariance_diagonal
+      linear_acceleration_covariance_diagonal
+      orientation_covariance_diagonal
+    -->
+  </node>
+
+</launch>

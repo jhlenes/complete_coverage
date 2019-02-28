@@ -1,0 +1,1 @@
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="d38b", MODE:="0777", SYMLINK+="xsens"

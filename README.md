@@ -1,6 +1,16 @@
 # otter_ros
 This is a collection of ROS packages.
 
+## Sensors
+This system will connect to several sensors. In order to know which sensor is at which USB port (```/dev/ttyUSB*```), we need to set up some udev rules. These rules are defined for [RPLIDAR](rplidar.rules), and [Xsens IMU](xsens.rules). Apply them by:
+```
+sudo cp rplidar.rules /etc/udev/rules.d
+sudo cp xsens.rules /etc/udev/rules.d
+```
+Unplug and replug your devices, and you finished.
+
+If you would like to add other sensors as well, you can find the ``` ATTRS{idVendor}``` and ```ATTRS{idProduct}``` with the ```lsusb``` command. If the names are cryptic, just unplug and replug your devices to see what is changing.
+
 ## Installation
 
 This package was made with ROS Kinetic. If you need help installing this package, look through the Dockerfile. Or just use Docker.

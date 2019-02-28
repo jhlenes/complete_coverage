@@ -1,26 +1,35 @@
 <?xml version="1.0" ?>
 <launch>
 
-    <arg name="lidar" default="true" />
-    <arg name="rviz" default="true" />
+  <arg name="sensors" default="true" />
+  <arg name="rviz"    default="true" />
 
-    <!-- Start the lidar -->
-    <include file="$(find otter_slam)/launch/lidar.launch" if="$(arg lidar)" />
+  <!-- Start the RPLIDAR -->
+  <include file="$(find otter_slam)/launch/lidar.launch" if="$(arg sensors)" />
 
-    <!-- Set up transformations between the 'laser' and 'base_link' frames.
-        'laser' is the lidar, 'base_link' is the base of the robot. -->
-    <include file="$(find otter_description)/launch/description.launch" if="$(arg lidar)" />
+  <!-- Start the Xsens IMU -->
+  <include file="$(find otter_slam)/launch/imu.launch" if="$(arg sensors)" />
 
-    <!-- Start the cartographer node. This node does SLAM. -->
-    <node name="cartographer_node" pkg="cartographer_ros"
-        type="cartographer_node" args="
-            -configuration_directory $(find otter_slam)/config
-            -configuration_basename otter.lua"
-        output="screen">
-    </node>
+  <!-- TODO: Start the GPS -->
 
-    <!-- Visualize SLAM in rviz -->
-    <node name="rviz" pkg="rviz" type="rviz" required="true"
-        args="-d $(find otter_slam)/config/slam.rviz" if="$(arg rviz)" />
+
+  <!-- Static transform publishers: defines transformations between lidar, IMU, GPS, and base of the Otter.
+    Measure the relative positions accurately, as the SLAM algorithm depends on it. -->
+  <!-- args: x y z yaw pitch roll parent_frame child_frame period_in_ms -->
+  <node pkg="tf" type="static_transform_publisher" name="base_laser_link" args="0 0 0 0 0 0 base_link lidar_link 100" />
+  <node pkg="tf" type="static_transform_publisher" name="base_imu_link" args="0 0 0 0 0 0 base_link imu_link 100" />
+  <node pkg="tf" type="static_transform_publisher" name="base_gps_link" args="0 0 0 0 0 0 base_link gps_link 100" />
+
+  <!-- Start the Cartographer SLAM node -->
+  <node name="cartographer_node" pkg="cartographer_ros"
+    type="cartographer_node" args="
+    -configuration_directory $(find otter_slam)/config
+    -configuration_basename otter.lua"
+    output="screen">
+  </node>
+
+  <!-- Visualize in rviz -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+  args="-d $(find otter_slam)/config/slam.rviz" if="$(arg rviz)" />
 
 </launch>

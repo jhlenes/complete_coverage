@@ -1,15 +1,21 @@
+<?xml version="1.0" ?>
 <launch>
 
-    <!-- Make sure not to use simulated time -->
-    <param name="use_sim_time" value="false" />
+  <!-- Make sure not to use simulated time -->
+  <param name="use_sim_time" value="false" />
 
-    <!-- Start rplidar node and set parameters. This is the lidar sensor. -->
-    <node name="rplidarNode" pkg="rplidar_ros" type="rplidarNode" output="screen">
-        <param name="serial_port"      type="string" value="/dev/ttyUSB0" />
-        <param name="serial_baudrate"  type="int"    value="115200"       />
-        <param name="frame_id"         type="string" value="laser"        />
-        <param name="inverted"         type="bool"   value="false"        />
-        <param name="angle_compensate" type="bool"   value="true"         />
-    </node>
+  <!-- Start driver for RPLIDAR A3 -->
+  <node name="rplidarNode" pkg="rplidar_ros" type="rplidarNode" output="screen">
+    <param name="serial_port"      type="string" value="/dev/rplidar" />
+    <param name="serial_baudrate"  type="int"    value="256000"       /> <!-- Don't change! -->
+    <param name="frame_id"         type="string" value="lidar_link" />
+    <param name="inverted"         type="bool"   value="false"        />
+    <param name="angle_compensate" type="bool"   value="true"         />
+    <param name="scan_mode"        type="string" value="Sensitivity"  />
+    <!-- Scan modes: Standard, Express, Boost, Sensitivity, Stability.
+    All of them are undocumented, just use Sensitivity (which is standard
+    in examples provided by Slamtec). -->
+    <remap from="/scan" to="/scan" />
+  </node>
 
 </launch>
