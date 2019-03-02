@@ -22,10 +22,10 @@ Coverage::Coverage()
   ros::NodeHandle nhP("~");
 
   // Get parameters
-  m_x0 = nhP.param("x0", -3);
-  m_y0 = nhP.param("y0", -6);
-  m_x1 = nhP.param("x1", 7);
-  m_y1 = nhP.param("y1", 10);
+  m_x0 = nhP.param("x0", -51);
+  m_y0 = nhP.param("y0", -51);
+  m_x1 = nhP.param("x1", 10);
+  m_y1 = nhP.param("y1", 50);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
   m_scanRange = nhP.param("scan_range", 10);
   m_goalTolerance = nhP.param("goal_tolerance", 1.0);

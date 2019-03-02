@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(coverage_binn)
+project(guidance)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -7,7 +7,7 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp tf2 tf2_ros visualization_msgs nav_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp nav_msgs geometry_msgs tf2 tf2_ros)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -34,7 +34,6 @@ find_package(catkin REQUIRED COMPONENTS roscpp tf2 tf2_ros visualization_msgs na
 ##     * add a exec_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
-##     find_package(catkin REQUIRED COMPONENTS ...)
 ##   * add "message_runtime" and every package in MSG_DEP_SET to
 ##     catkin_package(CATKIN_DEPENDS ...)
 ##   * uncomment the add_*_files sections below as needed
@@ -100,7 +99,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp tf2 tf2_ros visualization_msgs na
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES coverage_binn
+#  LIBRARIES guidance
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
@@ -113,13 +112,11 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
   include ${catkin_INCLUDE_DIRS}
-# include
-# ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/coverage_binn.cpp
+#   src/${PROJECT_NAME}/guidance.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -130,7 +127,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/coverage_binn_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/guidance_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -187,7 +184,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_coverage_binn.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_guidance.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
@@ -195,16 +192,12 @@ include_directories(
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(coverage_binn_node
-  include/coverage_binn/coverage_binn.h
-  include/coverage_binn/partition_binn.h
-  include/simple_dubins_path/simple_dubins_path.h
-  src/coverage_binn_node.cpp
-  src/coverage_binn.cpp
-  src/partition_binn.cpp
-  src/simple_dubins_path.cpp  
+add_executable(guidance_node
+  include/guidance/guidance.h
+  src/guidance.cpp
+  src/guidance_node.cpp
 )
-add_dependencies(coverage_binn_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(coverage_binn_node
+add_dependencies(guidance_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(guidance_node
   ${catkin_LIBRARIES}
 )

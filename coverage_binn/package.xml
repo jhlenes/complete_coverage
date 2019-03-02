@@ -53,9 +53,6 @@
   <build_depend>nav_msgs</build_depend>
   <build_export_depend>nav_msgs</build_export_depend>
   <exec_depend>nav_msgs</exec_depend>
-  <build_depend>map_inflating</build_depend>
-  <build_export_depend>map_inflating</build_export_depend>
-  <exec_depend>map_inflating</exec_depend>
   <build_depend>roscpp</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <exec_depend>roscpp</exec_depend>

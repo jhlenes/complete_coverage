@@ -52,7 +52,6 @@
 
   <exec_depend>rplidar_ros</exec_depend>
   <exec_depend>cartographer_ros</exec_depend>
-  <exec_depend>otter_description</exec_depend>
   <exec_depend>cartographer_rviz</exec_depend>
 
 

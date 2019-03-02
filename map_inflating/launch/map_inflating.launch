@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<launch>
+
+  <arg name="inflating_radius" default="3.0" />
+
+  <!-- This node remaps 'inf' in laser scans to 'max_range - 0.01', which ensures
+  that raytracing of free space can be done in other nodes. -->
+  <node name="laser_filter_node" pkg="map_inflating" type="laser_filter_node">
+    <remap from="scan"          to="lidar/scan"/> <!-- Input -->
+    <remap from="filtered_scan" to="filtered_scan"/> <!-- Output -->
+  </node>
+
+  <node name="costmap_node" pkg="costmap_2d" type="costmap_2d_node" >    
+    <!-- Calculate inflation_radius and cost_scaling_factor to get the actual desired inflating_radius of objects.
+    See: https://answers.ros.org/question/12874/costmap2d-inflation-radius/ -->
+    <param name="costmap/inflation_radius" value="$(arg inflating_radius)" />
+    <param name="costmap/cost_scaling_factor" value="$(eval 0.92425890152 / (arg('inflating_radius') - 1.97))" />
+
+    <rosparam file="$(find map_inflating)/config/map_params.yaml" command="load" ns="costmap" />
+
+    <remap from="/costmap_node/costmap/costmap" to="/inflated_map" />
+  </node>
+
+</launch>

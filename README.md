@@ -2,10 +2,10 @@
 This is a collection of ROS packages.
 
 ## Sensors
-This system will connect to several sensors. In order to know which sensor is at which USB port (```/dev/ttyUSB*```), we need to set up some udev rules. These rules are defined for [RPLIDAR](rplidar.rules), and [Xsens IMU](xsens.rules). Apply them by:
+This system will connect to several sensors. In order to know which sensor is at which USB port (```/dev/ttyUSB*```), we need to set up some udev rules. These rules are defined for [RPLIDAR](etc/rplidar.rules), and [Xsens IMU](etc/xsens.rules). Apply them by:
 ```
-sudo cp rplidar.rules /etc/udev/rules.d
-sudo cp xsens.rules /etc/udev/rules.d
+sudo cp etc/rplidar.rules /etc/udev/rules.d
+sudo cp etc/xsens.rules /etc/udev/rules.d
 ```
 Unplug and replug your devices, and you are finished.
 

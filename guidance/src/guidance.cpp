@@ -9,8 +9,8 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <algorithm>
-#include <iostream>
 #include <cmath>
+#include <iostream>
 #include <queue>
 #include <vector>
 
@@ -21,8 +21,8 @@ Guidance::Guidance()
 {
   ros::NodeHandle nh;
 
-  ros::Subscriber waypointSub =
-      nh.subscribe("move_base_simple/goal", 1000, &Guidance::newWaypoint, this);
+  //ros::Subscriber waypointSub =
+  //    nh.subscribe("move_base_simple/goal", 1000, &Guidance::newWaypoint, this);
 
   ros::Subscriber dubinsPathSub =
       nh.subscribe("simple_dubins_path", 1000, &Guidance::newPath, this);
@@ -103,7 +103,7 @@ void Guidance::followPath(double x, double y, double psi)
   geometry_msgs::PoseStamped pose_d = *closest;
 
   // Erase previous elements
-  //m_path.poses.erase(m_path.poses.begin(), closest);
+  // m_path.poses.erase(m_path.poses.begin(), closest);
 
   // Path tangential angle
   double gamma_p = tf2::getYaw(pose_d.pose.orientation);
@@ -113,12 +113,17 @@ void Guidance::followPath(double x, double y, double psi)
                (y - pose_d.pose.position.y) * std::cos(gamma_p);
 
   // Time-varying lookahead distance
-  double delta_y_e = (delta_max -  delta_min) * std::exp(-delta_k * std::pow(y_e, 2)) + delta_min;
+  double delta_y_e =
+      (delta_max - delta_min) * std::exp(-delta_k * std::pow(y_e, 2)) +
+      delta_min;
   // if turning => small lookahead distance
-  if ((closest+1) != m_path.poses.end()) {
-      if (std::fabs(gamma_p - tf2::getYaw((*(closest+1)).pose.orientation)) < std::numeric_limits<double>::epsilon()) {
-          delta_y_e = delta_min;
-      }
+  if ((closest + 1) != m_path.poses.end())
+  {
+    if (std::fabs(gamma_p - tf2::getYaw((*(closest + 1)).pose.orientation)) <
+        std::numeric_limits<double>::epsilon())
+    {
+      delta_y_e = delta_min;
+    }
   }
 
   // velocity-path relative angle
