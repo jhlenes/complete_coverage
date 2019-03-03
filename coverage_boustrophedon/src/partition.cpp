@@ -273,8 +273,8 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
         unknown = true;
       }
 
-      // Any map cell with occupancy probability > 50
-      if (map.data[m] > 50)
+      // Any map cell with occupancy probability > 30
+      if (map.data[m] > 30)
       {
         return Blocked;
       }

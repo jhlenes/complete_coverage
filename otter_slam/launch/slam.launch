@@ -5,10 +5,10 @@
   <arg name="rviz"    default="true" />
 
   <!-- Start the RPLIDAR -->
-  <include file="$(find otter_slam)/launch/lidar.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/lidar.launch" if="$(arg sensors)" />
 
   <!-- Start the Xsens IMU -->
-  <include file="$(find otter_slam)/launch/imu.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/imu.launch" if="$(arg sensors)" />
 
   <!-- TODO: Start the GPS -->
 

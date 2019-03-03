@@ -1,13 +1,13 @@
 <launch>
 
   <!-- Start SLAM -->
-  <include file="$(find otter_slam)/launch/kingfisher.launch">
+  <include file="$(find otter_slam)/launch/otter.launch">
     <arg name="rviz" value="false" />
   </include>
 
   <!-- Map inflating -->
   <include file="$(find map_inflating)/launch/map_inflating.launch">
-    <arg name="inflating_radius" value="4.0" />
+    <arg name="inflating_radius" value="3.0" />
   </include>
 
   <!-- Guidance node -->

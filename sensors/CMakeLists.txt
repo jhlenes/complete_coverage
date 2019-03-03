@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(map_inflating)
+project(sensors)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs message_filters nav_msgs rplidar_ros xsens_driver)
+find_package(catkin REQUIRED COMPONENTS message_filters nav_msgs roscpp rplidar_ros xsens_driver sensor_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -34,6 +34,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs message_filters nav_m
 ##     * add a exec_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
+##     find_package(catkin REQUIRED COMPONENTS ...)
 ##   * add "message_runtime" and every package in MSG_DEP_SET to
 ##     catkin_package(CATKIN_DEPENDS ...)
 ##   * uncomment the add_*_files sections below as needed
@@ -99,7 +100,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs message_filters nav_m
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES map_inflating
+#  LIBRARIES sensors
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
@@ -110,15 +111,12 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
-  include ${catkin_INCLUDE_DIRS}
-# include
-# ${catkin_INCLUDE_DIRS}
+include_directories( include ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/map_inflating.cpp
+#   src/${PROJECT_NAME}/sensors.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -129,7 +127,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/map_inflating_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/sensors_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -186,10 +184,18 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_map_inflating.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_sensors.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(odom_filter_node src/odom_filter.cpp)
+target_link_libraries(odom_filter_node  ${catkin_LIBRARIES})
+add_dependencies(odom_filter_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(laser_filter_node  src/laser_filter.cpp)
+add_dependencies(laser_filter_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(laser_filter_node  ${catkin_LIBRARIES})
