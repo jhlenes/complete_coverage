@@ -45,6 +45,7 @@ Guidance::Guidance()
     catch (tf2::TransformException& ex)
     {
       ROS_WARN("Transform from map to base_link not found: %s", ex.what());
+      ros::Duration(1.0).sleep();
       continue;
     }
     double x = tfStamped.transform.translation.x;
@@ -142,12 +143,12 @@ void Guidance::followPath(double x, double y, double psi)
   {
     chi_err += 2 * M_PI;
   }
-  double r = std::min(chi_err, 0.8);
-  r = std::max(r, -0.8);
+  double r = std::min(chi_err, m_maxTurningRate);
+  r = std::max(r, -m_maxTurningRate);
 
   // calculate desired speed
-  double u = 0.4 * (1 - std::abs(y_e) / 5 - std::abs(chi_err) / M_PI_2);
-  u = std::max(u, 0.1);
+  double u = m_maxSpeed * (1 - std::abs(y_e) / 5 - std::abs(chi_err) / M_PI_2);
+  u = std::max(u, 0.2);
 
   // publish angle and speed
   geometry_msgs::Twist cmd_vel;

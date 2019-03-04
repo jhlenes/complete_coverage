@@ -22,14 +22,14 @@
 
   <!-- Start the Cartographer SLAM node -->
   <node name="cartographer_node" pkg="cartographer_ros"
-    type="cartographer_node" args="
-    -configuration_directory $(find otter_slam)/config_usv
-    -configuration_basename otter.lua"
-    output="screen">
+        type="cartographer_node" args="
+        -configuration_directory $(find otter_slam)/config_usv
+        -configuration_basename otter.lua"
+        output="screen">
   </node>
 
   <!-- Visualize in rviz -->
   <node name="rviz" pkg="rviz" type="rviz" required="true"
-  args="-d $(find otter_slam)/config/slam.rviz" if="$(arg rviz)" />
+        args="-d $(find otter_slam)/config/slam.rviz" if="$(arg rviz)" />
 
 </launch>

@@ -58,6 +58,8 @@ class CoverageBinn {
   SimpleDubinsPath m_dubin;
 
   ros::Publisher m_goalPub;
+  ros::Publisher m_dubinPub;
+
 };
 
 #endif

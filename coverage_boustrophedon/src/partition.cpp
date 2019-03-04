@@ -57,6 +57,7 @@ void Partition::drawPartition()
       marker.action = visualization_msgs::Marker::ADD;
       marker.pose.position.x = wx;
       marker.pose.position.y = wy;
+      marker.pose.position.z = 0.1;
       marker.scale.x = m_cellSize;
       marker.scale.y = m_cellSize;
       marker.scale.z = 0.01;
@@ -273,8 +274,8 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
         unknown = true;
       }
 
-      // Any map cell with occupancy probability > 30
-      if (map.data[m] > 30)
+      // Any map cell with occupancy probability higher than a threshold
+      if (map.data[m] > 50)
       {
         return Blocked;
       }
@@ -288,8 +289,12 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
   }
 
   // No blocked cells, but some are unknown.
-  if (unknown)
+  if (unknown && getStatus(gx, gy) == Unknown)
     return Unknown;
+
+  // Partially blocked cell
+  if (unknown && getStatus(gx, gy) == Blocked)
+    return Blocked;
 
   return Free;
 }

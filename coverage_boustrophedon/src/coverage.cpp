@@ -24,10 +24,10 @@ Coverage::Coverage()
   // Get parameters
   m_x0 = nhP.param("x0", -51);
   m_y0 = nhP.param("y0", -51);
-  m_x1 = nhP.param("x1", 10);
+  m_x1 = nhP.param("x1", 100);
   m_y1 = nhP.param("y1", 50);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
-  m_scanRange = nhP.param("scan_range", 10);
+  m_scanRange = nhP.param("scan_range", 24.5);
   m_goalTolerance = nhP.param("goal_tolerance", 1.0);
 
   // Set up partition
@@ -137,7 +137,7 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       if (locateBestBacktrackingPoint(bpX, bpY, gx, gy))
       {
         ROS_INFO("Critical point! Backtracking...");
-        auto path = aStarSPT(m_partition, {gx, gy}, {bpX, bpY});
+        auto path = aStarSearch(m_partition, {gx, gy}, {bpX, bpY});
         for (auto it = path.begin() + 1; it != path.end(); it++)
         {
           m_waypoints.push_back(*it);
@@ -218,7 +218,7 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
     if (!goingToStart)
     {
       ROS_INFO("Going to start!");
-      auto path = aStarSPT(m_partition, {gx, gy}, {startX, startY});
+      auto path = aStarSearch(m_partition, {gx, gy}, {startX, startY});
       for (auto it = path.begin() + 1; it != path.end(); it++)
       {
         m_waypoints.push_back(*it);

@@ -12,9 +12,9 @@
         -configuration_directory $(find otter_slam)/config_usv
         -configuration_basename kingfisher.lua"
         output="screen">
-        <remap from="scan" to="filtered_scan" />
-        <remap from="imu" to="imu/data" />
-        <remap from="odom" to="odom" />
+    <remap from="scan" to="filtered_scan" />
+    <remap from="imu"  to="imu/data" />
+    <remap from="odom" to="odom" />
   </node>
 
   <!-- Visualize SLAM in rviz -->

@@ -1,41 +1,15 @@
 <?xml version="1.0" ?>
 <launch>
 
-    <!-- Start SLAM -->
-    <include file="$(find otter_slam)/launch/kingfisher.launch">
-        <arg name="rviz" value="false" />
-    </include>
-
-    <!-- Create a map from the cartographer submaps -->
-    <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
-        type="cartographer_occupancy_grid_node" args="-resolution 0.10" />
-
-    <node name="map_inflating_node" pkg="map_inflating" type="map_inflating_node" output="screen">
-        <param name="inflation_radius" value="2.0" />
-    </node>
-
-    <node name="coverage_binn_node" pkg="coverage_binn" type="coverage_binn_node" output="screen">
-        
-    </node>
-
-    <!-- Navigation node -->
-    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-        <rosparam file="$(find otter_navigation)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
-        <rosparam file="$(find otter_navigation)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
-        <rosparam file="$(find otter_navigation)/config/local_costmap_params.yaml" command="load" />
-        <rosparam file="$(find otter_navigation)/config/global_costmap_params.yaml" command="load" />
-        <rosparam file="$(find otter_navigation)/config/base_local_planner_params.yaml" command="load" />
-        <param name="base_global_planner" value="navfn/NavfnROS"/>
-    </node>
-    
-    <!-- Convert Twist messages to Drive messages -->
-    <node pkg="vmrc_gazebo" type="twist2thrust.py" name="twist2thrust" output="screen" args="--keyboard">
-        <remap from="left_cmd" to="left_thrust_cmd"/>
-        <remap from="right_cmd" to="right_thrust_cmd"/>
-    </node>
-
-    <!-- Visualize in rviz -->
-    <node name="rviz" pkg="rviz" type="rviz" required="true"
-        args="-d $(find coverage_binn)/config/binn.rviz" />
+  <node name="coverage_binn_node" pkg="coverage_binn" type="coverage_binn_node" output="screen">
+    <param name="cell_radius"     value="5" />
+    <param name="goal_tolerance"  value="3.0" />
+    <param name="scan_range"      value="20" />
+  </node>
+  
+  <node name="simple_dubins_path_node" pkg="coverage_boustrophedon" type="simple_dubins_path_node" output="screen">
+    <param name="turning_radius"  value="2.5" />
+    <param name="path_resolution" value="0.10" />
+  </node>
 
 </launch>
