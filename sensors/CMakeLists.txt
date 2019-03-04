@@ -199,3 +199,7 @@ add_dependencies(odom_filter_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_E
 add_executable(laser_filter_node  src/laser_filter.cpp)
 add_dependencies(laser_filter_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(laser_filter_node  ${catkin_LIBRARIES})
+
+add_executable(android_filter_node  src/android_filter.cpp)
+add_dependencies(android_filter_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(android_filter_node  ${catkin_LIBRARIES})

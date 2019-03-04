@@ -15,7 +15,7 @@
     <!-- Scan modes: Standard, Express, Boost, Sensitivity, Stability.
     All of them are undocumented, just use Sensitivity (which is standard
     in examples provided by Slamtec). -->
-    <remap from="/scan" to="/scan" />
+    <remap from="scan" to="lidar/scan" />
   </node>
 
 </launch>
