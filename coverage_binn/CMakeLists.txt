@@ -205,7 +205,7 @@ include_directories(
 add_executable(coverage_binn_node
   include/coverage_binn/coverage_binn.h
   include/coverage_binn/partition_binn.h
-  include/simple_dubins_path/simple_dubins_path.h
+  include/coverage_binn/simple_dubins_path.h
   src/coverage_binn_node.cpp
   src/coverage_binn.cpp
   src/partition_binn.cpp

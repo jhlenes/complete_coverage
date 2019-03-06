@@ -1,12 +1,17 @@
-#ifndef SIMPLE_DUBINS_PATH_H_
-#define SIMPLE_DUBINS_PATH_H_
+#ifndef SIMPLE_DUBINS_BINN_PATH_H_
+#define SIMPLE_DUBINS_BINN_PATH_H_
 
+#include <coverage_boustrophedon/DubinInput.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Path.h>
 #include <ros/ros.h>
 
-class SimpleDubinsPath {
- public:
+namespace coverage_binn
+{
+
+class SimpleDubinsPath
+{
+public:
   SimpleDubinsPath();
   ~SimpleDubinsPath();
 
@@ -16,13 +21,17 @@ class SimpleDubinsPath {
   bool getTargetHeading(double x_q, double y_q, double theta_q, double x_n,
                         double y_n, double& yawTarget);
 
- private:
-  enum Dir { Left = 1, Right = -1 };
+private:
+  enum Dir
+  {
+    Left = 1,
+    Right = -1
+  };
 
   Dir turningDirection(double x_q, double y_q, double theta_q, double x_n,
                        double y_n);
-  void turningCenter(double x_q, double y_q, double theta_q, double x_n,
-                     double y_n, double& x_cr, double& y_cr);
+  void turningCenter(double x_q, double y_q, double theta_q, double& x_cr,
+                     double& y_cr, Dir dir);
   void tangentLine(double x_n, double y_n, double x_cr, double y_cr,
                    double& beta1, double& beta2);
   void tangentPoint(double x_q, double y_q, double x_n, double y_n, double x_cr,
@@ -35,7 +44,8 @@ class SimpleDubinsPath {
 
   double m_turningRadius;
   double m_pathResolution;
-  ros::Publisher m_pathPub;
 };
+
+} // namespace coverage_binn
 
 #endif

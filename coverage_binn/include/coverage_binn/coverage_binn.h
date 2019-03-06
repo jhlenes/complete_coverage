@@ -4,7 +4,7 @@
 #include <coverage_binn/partition_binn.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <ros/ros.h>
-#include <simple_dubins_path/simple_dubins_path.h>
+#include <coverage_binn/simple_dubins_path.h>
 #include <tf2_ros/transform_listener.h>
 
 class CoverageBinn {
@@ -55,7 +55,7 @@ class CoverageBinn {
   // Params
   double m_circleAcceptance = 1.0;
 
-  SimpleDubinsPath m_dubin;
+  coverage_binn::SimpleDubinsPath m_dubin;
 
   ros::Publisher m_goalPub;
   ros::Publisher m_dubinPub;
