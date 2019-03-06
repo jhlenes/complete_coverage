@@ -272,6 +272,7 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
       if (xMap + i >= map.info.width || yMap + j >= map.info.height)
       {
         unknown = true;
+        continue;
       }
 
       // Any map cell with occupancy probability higher than a threshold

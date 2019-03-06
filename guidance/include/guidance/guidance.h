@@ -32,15 +32,15 @@ private:
   double DELTA = 0.5;
 
   // time-varying lookahead distance
-  double delta_max = 7.0;
-  double delta_min = 3.0;
+  double delta_max = 5.0;
+  double delta_min = 2.0;
   double delta_k = 1.0;
 
   // circle of acceptance
   double R = 1.0;
 
   const double m_maxSpeed = 0.6;
-  const double m_maxTurningRate = 0.5;
+  const double m_maxTurningRate = 0.6;
 };
 
 } // namespace otter_coverage

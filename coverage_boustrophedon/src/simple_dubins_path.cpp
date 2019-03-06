@@ -282,6 +282,12 @@ void SimpleDubinsPath::generatePath(double x_q, double y_q, double x_n,
     point.header.frame_id = "map";
     point.pose.position.x = x_cr + cos(i) * m_turningRadius;
     point.pose.position.y = y_cr + sin(i) * m_turningRadius;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, i + ((dir == Right) ? -M_PI_2 : M_PI_2));
+    point.pose.orientation.x = q.x();
+    point.pose.orientation.y = q.y();
+    point.pose.orientation.z = q.z();
+    point.pose.orientation.w = q.w();
     path.poses.push_back(point);
   }
 
@@ -289,6 +295,8 @@ void SimpleDubinsPath::generatePath(double x_q, double y_q, double x_n,
   double dy = y_n - y_lc;
   double dx_norm = dx / std::sqrt(dx * dx + dy * dy);
   double dy_norm = dy / std::sqrt(dx * dx + dy * dy);
+  tf2::Quaternion q;
+  q.setRPY(0, 0, std::atan2(y_n - y_lc, x_n - x_lc));
 
   // generate straight line segment
   for (double i = 0;
@@ -301,6 +309,10 @@ void SimpleDubinsPath::generatePath(double x_q, double y_q, double x_n,
     point.header.frame_id = "map";
     point.pose.position.x = x_lc + i * m_pathResolution * dx_norm;
     point.pose.position.y = y_lc + i * m_pathResolution * dy_norm;
+    point.pose.orientation.x = q.x();
+    point.pose.orientation.y = q.y();
+    point.pose.orientation.z = q.z();
+    point.pose.orientation.w = q.w();
     path.poses.push_back(point);
   }
 

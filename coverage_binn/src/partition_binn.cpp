@@ -228,6 +228,7 @@ PartitionBinn::calculateStatus(const nav_msgs::OccupancyGrid& map, int l, int k)
       if (xMap + i >= map.info.width || yMap + j >= map.info.height)
       {
         unknown = true;
+        continue;
       }
 
       // Any map cell with occupancy probability > 50

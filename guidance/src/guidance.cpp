@@ -21,8 +21,9 @@ Guidance::Guidance()
 {
   ros::NodeHandle nh;
 
-  //ros::Subscriber waypointSub =
-  //    nh.subscribe("move_base_simple/goal", 1000, &Guidance::newWaypoint, this);
+  // ros::Subscriber waypointSub =
+  //    nh.subscribe("move_base_simple/goal", 1000, &Guidance::newWaypoint,
+  //    this);
 
   ros::Subscriber dubinsPathSub =
       nh.subscribe("simple_dubins_path", 1000, &Guidance::newPath, this);
@@ -97,17 +98,21 @@ void Guidance::followPath(double x, double y, double psi)
     double dist = std::sqrt(std::pow(x - it->pose.position.x, 2) +
                             std::pow(y - it->pose.position.y, 2));
     if (dist < minDist)
+    {
+      minDist = dist;
       closest = it;
+    }
   }
 
   // Store closest
   geometry_msgs::PoseStamped pose_d = *closest;
 
   // Erase previous elements
-  // m_path.poses.erase(m_path.poses.begin(), closest);
+  m_path.poses.erase(m_path.poses.begin(), closest);
 
   // Path tangential angle
   double gamma_p = tf2::getYaw(pose_d.pose.orientation);
+  ROS_INFO_STREAM("Path tangential angle: " << gamma_p);
 
   // Cross-track error
   double y_e = -(x - pose_d.pose.position.x) * std::sin(gamma_p) +
@@ -118,12 +123,14 @@ void Guidance::followPath(double x, double y, double psi)
       (delta_max - delta_min) * std::exp(-delta_k * std::pow(y_e, 2)) +
       delta_min;
   // if turning => small lookahead distance
+  bool isTurning = false;
   if ((closest + 1) != m_path.poses.end())
   {
-    if (std::fabs(gamma_p - tf2::getYaw((*(closest + 1)).pose.orientation)) <
-        std::numeric_limits<double>::epsilon())
+    double nextAngle = tf2::getYaw((*(closest + 1)).pose.orientation);
+    if (std::fabs(gamma_p - nextAngle) > std::numeric_limits<double>::epsilon())
     {
       delta_y_e = delta_min;
+      isTurning = true;
     }
   }
 
@@ -149,6 +156,7 @@ void Guidance::followPath(double x, double y, double psi)
   // calculate desired speed
   double u = m_maxSpeed * (1 - std::abs(y_e) / 5 - std::abs(chi_err) / M_PI_2);
   u = std::max(u, 0.2);
+  if (isTurning) u = 0.3;
 
   // publish angle and speed
   geometry_msgs::Twist cmd_vel;

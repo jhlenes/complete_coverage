@@ -1,6 +1,7 @@
 <?xml version="1.0" ?>
 <launch>
 
+  <!-- launch-prefix="gdb -ex run \-\-args" -->
   <node name="coverage_node" pkg="coverage_boustrophedon" type="coverage_node" output="screen">
     <param name="tile_resolution" value="10" />
     <param name="goal_tolerance"  value="3.0" />
