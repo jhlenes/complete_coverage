@@ -11,6 +11,8 @@
 #include <nav_msgs/Path.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <simple_dubins_path/simple_dubins_path.h>
+
 namespace otter_coverage
 {
 

@@ -33,6 +33,13 @@ SimpleDubinsPath::SimpleDubinsPath()
   }
 }
 
+SimpleDubinsPath::SimpleDubinsPath(double turningRadius, double pathResolution)
+    : m_turningRadius(turningRadius)
+    , m_pathResolution(pathResolution)
+{
+}
+
+
 SimpleDubinsPath::~SimpleDubinsPath() {}
 
 void SimpleDubinsPath::onGoal(const geometry_msgs::PoseStamped& goal)

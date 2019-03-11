@@ -29,6 +29,8 @@ add_executable(coverage_node
   include/coverage/a_star.h
   include/coverage/coverage.h
   include/coverage/partition.h
+  include/simple_dubins_path/simple_dubins_path.h
+  src/simple_dubins_path.cpp
   src/coverage_node.cpp
   src/coverage.cpp
   src/partition.cpp

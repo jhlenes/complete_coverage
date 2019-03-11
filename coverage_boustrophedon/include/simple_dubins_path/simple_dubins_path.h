@@ -13,6 +13,7 @@ class SimpleDubinsPath
 {
 public:
   SimpleDubinsPath();
+  SimpleDubinsPath(double turningRadius, double pathResolution);
   ~SimpleDubinsPath();
 
   bool makePath(const geometry_msgs::PoseStamped& start,
