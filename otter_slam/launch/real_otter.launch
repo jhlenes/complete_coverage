@@ -4,6 +4,9 @@
   <arg name="sensors" default="true" />
   <arg name="rviz"    default="true" />
 
+  <!-- Make sure not to use simulated time -->
+  <param name="use_sim_time" value="false" />
+
   <!-- Start the RPLIDAR -->
   <include file="$(find sensors)/launch/lidar.launch" if="$(arg sensors)" />
 
@@ -40,6 +43,7 @@
     <remap from="imu" to="imu/data" />
     <remap from="scan" to="filtered_scan" />
     <remap from="odom" to="odom" />
+    <!--<remap from="fix" to="gps/fix" />--> <!-- Not implemented for 2D -->
   </node>
 
   <!-- Visualize in rviz -->

@@ -15,7 +15,7 @@
       linear_acceleration_covariance_diagonal
       orientation_covariance_diagonal
     -->
-    <remap from="/imu/data" to="/imu" />
+    <remap from="/imu/data" to="/imu/data" />
   </node>
 
 </launch>

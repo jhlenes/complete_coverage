@@ -11,7 +11,7 @@
     <param name="odom_frame" value="odom"/>
     <param name="base_link_frame" value="base_link"/>
     <param name="world_frame" value="odom"/>
-    <param name="publish_tf" value="true"/>
+    <param name="publish_tf" value="false"/>
     <param name="frequency" value="60"/>
     <param name="imu0" value="imu/data"/>
     <!-- IMU measures orientation, angular velocity, and linear acceleration -->
@@ -75,7 +75,7 @@
         name="navsat_transform_node" respawn="true" output="screen">
     <param name="frequency" value="60"/>
     <param name="magnetic_declination_radians" value="0"/>
-    <param name="broadcast_utm_transform" value="true"/>
+    <param name="broadcast_utm_transform" value="false"/>
     <param name="wait_for_datum" value="true"/>
     <param name="use_odometry_yaw" value="true"/>
     <rosparam param="datum">[63.439358, 10.399541]</rosparam>
