@@ -1,5 +1,43 @@
 # otter_ros
-This is a collection of ROS packages.
+This is a collection of packages for the Robot Operating System (ROS). 
+
+Together, these packages provide an implementation of online complete coverage maneuvering for the [Otter USV](https://maritimerobotics.com/mariner-usv/otter/).
+
+## Installation
+Navigate to the ```src/``` folder in your catkin workspace, e.g. ```cd ~/catkin_ws/src```. Then run the following (the command ```sudo rosdep init``` will print an error if you have already executed it since installing ROS. This error can be ignored.)
+```
+git clone https://github.com/jhlenes/otter_ros.git
+cd ..
+sudo apt update
+sudo rosdep init
+rosdep update
+rosdep install --from-paths src --ignore-src --rosdistro=${ROS_DISTRO} -y
+catkin_make
+source devel/setup.bash
+```
+
+## Guidance
+The guidance package implements a line-of-sight (LOS) guidance for path following of curved paths. 
+
+The launch file sets up everything required for path following. It starts nodes for SLAM, map inflation, and LOS guidance. Furthermore, it sets up rviz for visualization. 
+```
+roslaunch guidance guidance
+```
+The Otter USV is now ready start moving, all it needs is a path from one of the two complete coverage path planning methods.
+
+## Complete coverage path planning
+There are two different implementations of complete coverage. ```coverage_binn``` implements a bio-inspired neural network (BINN) approach. ```coverage_boustrophedon``` implements an approach based on boustrophedon (back and forth like an ox in plowing) motions. ```coverage_boustrophedon``` is recommended because of fewer turns and more predictable behaviour.  
+```
+roslaunch coverage_binn coverage_binn.launch
+```
+```
+roslaunch coverage_boustrophedon coverage.launch
+```
+Once either of these are started while the ```guidance``` is running, the USV should start moving.
+
+## Simulation
+TODO: add [usv_simulator](https://github.com/jhlenes/usv_simulator.git) as submodule.
+
 
 ## Sensors
 This system will connect to several sensors. In order to know which sensor is at which USB port (```/dev/ttyUSB*```), we need to set up some udev rules. These rules are defined for [RPLIDAR](etc/rplidar.rules), and [Xsens IMU](etc/xsens.rules). Apply them by:
@@ -11,70 +49,9 @@ Unplug and replug your devices, and you are finished.
 
 If you would like to add other sensors as well, you can find the ``` ATTRS{idVendor}``` and ```ATTRS{idProduct}``` with the ```lsusb``` command. If the names are cryptic, just unplug and replug your devices to see what is changing.
 
-## Installation
-
-This package was made with ROS Kinetic. If you need help installing this package, look through the Dockerfile. Or just use Docker.
-
-## Docker
-
-A Docker image has been created with a complete ROS installation on a Jessie image.
-### Build the Docker image
-```
-docker build -t rosapp .
-```
-
-### Give the docker usergroup permission to use X Server
-```
-xhost +local:docker
-```
-This makes it possible to use GUI applications within the docker image. Use ```root``` instead of ```docker``` if you have not set up a docker usergroup.
-
-### Run 
-```
-docker run -it --device="/dev/ttyUSB0" --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix:rw --name ros --env="QT_X11_NO_MITSHM=1" rosapp
-```
-If you don't have a lidar connected use this instead:
-```
-docker run -it --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix:rw --name ros --env="QT_X11_NO_MITSHM=1" rosapp
-```
-
-### Open running container in several terminals
-In a new terminal, run
-```
-docker exec -it ros bash
-```
-
-### Setup environment
-To source the ROS environment, run
-```
-source /setup.bash
-```
-You can now run the commands in the sections below.
-
-## Simulation
-
-A simulation environment has been made with Gazebo. The simulation is currently of a wheeled robot equipped with a laser scanner sensor / lidar. The world is flat and contains some obstacles.
-The plan is to change this simulation so that it actually simulates the Otter USV on water instead of a wheeled robot. However, for simple testing of algorithms, the current simulation is good enough.
-
-The simulation is split up in three packages:
-
-- `otter_control` contains the configuration of the movement of the simulated robot. Here you can for instance change the speed at which it can move.
-- `otter_description` contains the description of the robot, i.e. how it looks. Also contains laser scanner configurations.
-- `otter_gazebo` contains the description of the world which is simulated.
-
-### Start the simulation
-```
-roslaunch otter_gazebo otter.launch
-```
-If you want to launch with a GUI to see how the simulation looks in Gazebo
-```
-roslaunch otter_gazebo otter.launch gui:=true
-```
-The first time usually takes a little while to load.
+## Map inflating
+The ```map_inflating``` package uses a [costmap](http://wiki.ros.org/costmap_2d) in order to inflate nearby obstacles.
 
 ## SLAM
-
-## Navigation
-
-## Coverage
+The ```slam``` package performs simultaneous localization and mapping (SLAM) with [Cartographer](https://google-cartographer-ros.readthedocs.io/en/latest/).
 
