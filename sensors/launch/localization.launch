@@ -12,7 +12,7 @@
     <param name="base_link_frame" value="base_link"/>
     <param name="world_frame" value="map"/>
     <param name="publish_tf" value="false"/>
-    <param name="frequency" value="60"/>
+    <param name="frequency" value="30"/>
     <param name="imu0" value="imu/data"/>
     <!-- IMU measures orientation, angular velocity, and linear acceleration -->
     <rosparam param="imu0_config">[false, false, false,
@@ -31,14 +31,14 @@
                                    false, false, false,
                                    false, false, false]</rosparam>
     <param name="odom0_differential" value="false"/>
-    
+
     <param name="smooth_lagged_data" value="true"/>
   </node>
 
   <!-- Produces local odometry from GPS to be used in Kalman filter -->
   <node pkg="robot_localization" type="navsat_transform_node"
         name="navsat_transform_node" respawn="true" output="screen">
-    <param name="frequency" value="60"/>
+    <param name="frequency" value="30"/>
     <param name="magnetic_declination_radians" value="0"/>
     <param name="broadcast_utm_transform" value="false"/>
     <param name="wait_for_datum" value="false"/>
