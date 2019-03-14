@@ -41,7 +41,7 @@
         -configuration_basename real_otter.lua"
         output="screen">
     <remap from="imu" to="imu/data" />
-    <remap from="scan" to="filtered_scan" />
+    <remap from="scan" to="lidar/scan" />
     <remap from="odom" to="odom" />
     <!--<remap from="fix" to="gps/fix" />--> <!-- Not implemented for 2D -->
   </node>
