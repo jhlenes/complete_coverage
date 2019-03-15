@@ -6,7 +6,7 @@ Together, these packages provide an implementation of online complete coverage m
 ## Installation
 Navigate to the ```src/``` folder in your catkin workspace, e.g. ```cd ~/catkin_ws/src```. Then run the following (the command ```sudo rosdep init``` will print an error if you have already executed it since installing ROS. This error can be ignored.)
 ```
-git clone https://github.com/jhlenes/otter_ros.git
+git clone https://github.com/jhlenes/otter_ros.git --recurse-submodules
 cd ..
 sudo apt update
 sudo rosdep init
