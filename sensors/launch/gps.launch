@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<launch>
+
+  <!-- A node that listens to nmea_sentence topic (nmea_msgs/Sentence), and publishes gps fix and velocity -->
+  <node name="nmeaNode" pkg="nmea_navsat_driver" type="nmea_tcp_driver" >
+    <!-- <param name="time_ref_source" type="string" value="" /> -->
+    <param name="useRMC" type="bool" value="false" />
+
+    <remap from="fix" to="gps/fix" />
+    <remap from="vel" to="gps/vel" />
+    <remap from="time_reference" to="gps/time_reference" />
+  </node>
+
+</launch>

@@ -1,0 +1,3 @@
+[submodule "nmea_navsat_driver"]
+	path = nmea_navsat_driver
+	url = https://github.com/jhlenes/nmea_navsat_driver.git
