@@ -18,10 +18,6 @@
   <node name="rviz" pkg="rviz" type="rviz" required="true"
     args="-d $(find coverage_boustrophedon)/config/coverage.rviz" />
 
-  <!-- Convert Twist messages to Drive messages -->
-  <node pkg="otter_gazebo" type="twist2thrust.py" name="twist2thrust" output="screen" args="--keyboard">
-    <remap from="left_cmd"  to="left_thrust_cmd"/>
-    <remap from="right_cmd" to="right_thrust_cmd"/>
-  </node>
+  <node name="OtterController" pkg="otter_control" type="controller" />
 
 </launch>

@@ -1,18 +1,11 @@
 #include <guidance/guidance.h>
 
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/Twist.h>
-#include <nav_msgs/OccupancyGrid.h>
-#include <nav_msgs/Path.h>
-#include <ros/ros.h>
 #include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <algorithm>
 #include <cmath>
-#include <iostream>
-#include <queue>
-#include <vector>
+
+#include <otter_control/SpeedCourse.h>
 
 namespace otter_coverage
 {
@@ -21,14 +14,11 @@ Guidance::Guidance()
 {
   ros::NodeHandle nh;
 
-  // ros::Subscriber waypointSub =
-  //    nh.subscribe("move_base_simple/goal", 1000, &Guidance::newWaypoint,
-  //    this);
-
   ros::Subscriber dubinsPathSub =
       nh.subscribe("simple_dubins_path", 1000, &Guidance::newPath, this);
 
-  m_cmdVelPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
+  m_controllerPub =
+      nh.advertise<otter_control::SpeedCourse>("speed_heading", 1000);
 
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
@@ -62,31 +52,19 @@ Guidance::Guidance()
 
 Guidance::~Guidance() {}
 
-void Guidance::newWaypoint(const geometry_msgs::PoseStamped& waypoint)
-{
-  // Add new waypoint to the list of waypoints
-  m_waypoints.poses.push_back(waypoint);
-
-  // When we get two waypoints we can start to navigate
-  if (m_waypoints.poses.size() == 2)
-  {
-    m_currentWp = 1;
-  }
-}
-
 void Guidance::newPath(const nav_msgs::Path& path) { m_path = path; }
 
 void Guidance::followPath(double x, double y, double psi)
 // TODO: cuts turns, how to fix?
 {
-#if 1
+
   // Finished?
   if (m_path.poses.size() <= 1)
   {
-    geometry_msgs::Twist cmd_vel;
-    cmd_vel.linear.x = 0.0;
-    cmd_vel.angular.z = 0.0;
-    m_cmdVelPub.publish(cmd_vel);
+    otter_control::SpeedCourse msg;
+    msg.u = 0.0;
+    msg.psi = 0.0;
+    m_controllerPub.publish(msg);
     return;
   }
 
@@ -112,7 +90,6 @@ void Guidance::followPath(double x, double y, double psi)
 
   // Path tangential angle
   double gamma_p = tf2::getYaw(pose_d.pose.orientation);
-  ROS_INFO_STREAM("Path tangential angle: " << gamma_p);
 
   // Cross-track error
   double y_e = -(x - pose_d.pose.position.x) * std::sin(gamma_p) +
@@ -140,7 +117,7 @@ void Guidance::followPath(double x, double y, double psi)
   // desired course angle
   double chi_d = gamma_p + chi_r;
 
-  // calculate desired yaw rate
+  // calculate error in heading
   double chi_err = chi_d - psi;
   while (chi_err > M_PI)
   {
@@ -150,85 +127,18 @@ void Guidance::followPath(double x, double y, double psi)
   {
     chi_err += 2 * M_PI;
   }
-  double r = std::min(chi_err, m_maxTurningRate);
-  r = std::max(r, -m_maxTurningRate);
 
   // calculate desired speed
   double u = m_maxSpeed * (1 - std::abs(y_e) / 5 - std::abs(chi_err) / M_PI_2);
   u = std::max(u, 0.2);
-  if (isTurning) u = 0.3;
+  if (isTurning)
+    u = 0.6;
 
-  // publish angle and speed
-  geometry_msgs::Twist cmd_vel;
-  cmd_vel.linear.x = u;
-  cmd_vel.angular.z = r;
-  m_cmdVelPub.publish(cmd_vel);
-#endif
-
-#if 0
-  // Not enough waypoints to navigate from
-  if (m_currentWp < 1 || m_currentWp >= m_waypoints.poses.size())
-  {
-    // publish angle and speed
-    geometry_msgs::Twist cmd_vel;
-    cmd_vel.linear.x = 0.0;
-    cmd_vel.angular.z = 0.0;
-    this->m_cmdVelPub.publish(cmd_vel);
-    return;
-  }
-
-  // Get the relevant waypoints
-  geometry_msgs::PoseStamped p1 = m_waypoints.poses.at(m_currentWp);
-  geometry_msgs::PoseStamped p0 = m_waypoints.poses.at(m_currentWp - 1);
-
-  // path tangential angle
-  double alpha_k = std::atan2(p1.pose.position.y - p0.pose.position.y,
-                              p1.pose.position.x - p0.pose.position.x);
-
-  // cross track error
-  double e = -(x - p0.pose.position.x) * std::sin(alpha_k) +
-             (y - p0.pose.position.y) * std::cos(alpha_k);
-
-  // velocity-path relative angle
-  double chi_r = std::atan(-e / DELTA);
-
-  // switch waypoints if close enough
-  if (std::pow(p1.pose.position.x - x, 2) +
-          std::pow(p1.pose.position.y - y, 2) <
-      std::pow(R, 2))
-  {
-    m_currentWp++;
-  }
-
-  // desired course angle
-  double chi_d = alpha_k + chi_r;
-
-  // calculate desired yaw rate
-  double chi_err = chi_d - psi;
-  while (chi_err > M_PI)
-  {
-    chi_err -= 2 * M_PI;
-  }
-  while (chi_err < -M_PI)
-  {
-    chi_err += 2 * M_PI;
-  }
-  double r = std::min(chi_err, 1.0);
-  r = std::max(r, -1.0);
-
-  ROS_INFO_STREAM("PSI: " << psi);
-  ROS_INFO_STREAM("chi_d: " << chi_d);
-
-  // calculate desired speed
-  double u = 0.4 * (1 - std::abs(e) / 5 - std::abs(chi_err) / M_PI);
-  u = std::max(u, 0.1);
-
-  // publish angle and speed
-  geometry_msgs::Twist cmd_vel;
-  cmd_vel.linear.x = u;
-  cmd_vel.angular.z = r;
-  this->m_cmdVelPub.publish(cmd_vel);
-#endif
+  // Publish speed and course to controller
+  otter_control::SpeedCourse msg;
+  msg.u = u;
+  msg.psi = chi_d;
+  m_controllerPub.publish(msg);
 }
 
 } // namespace otter_coverage

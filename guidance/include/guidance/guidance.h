@@ -20,13 +20,9 @@ private:
   void followPath(double x, double y, double psi);
   double dist(double x0, double y0, double x1, double y1) const;
 
-  int m_currentWp;
-
   nav_msgs::Path m_path;
 
-  nav_msgs::Path m_waypoints;
-
-  ros::Publisher m_cmdVelPub;
+  ros::Publisher m_controllerPub;
 
   // lookahead distance
   double DELTA = 0.5;
@@ -39,7 +35,7 @@ private:
   // circle of acceptance
   double R = 1.0;
 
-  const double m_maxSpeed = 0.6;
+  const double m_maxSpeed = 1.5;
   const double m_maxTurningRate = 0.6;
 };
 
