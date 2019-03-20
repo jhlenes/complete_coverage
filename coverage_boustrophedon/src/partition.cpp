@@ -13,6 +13,8 @@ void Partition::initialize(ros::NodeHandle nh, double x0, double y0, double x1,
   // TODO: rotate coordinate system? so that rectangle doesn't need to be
   // aligned with x and y axis in map frame.
 
+  cellSize = 1.0; // TODO: remove
+
   m_initialized = true;
 
   m_nh = nh;
@@ -194,15 +196,17 @@ bool Partition::isCovered(int gx, int gy)
   return m_grid[gx][gy].isCovered;
 }
 
-void Partition::setCovered(int gx, int gy, bool isCovered)
+void Partition::setCovered(int gx, int gy, bool isCovered, int coverageSize)
 {
-  if (!withinGridBounds(gx, gy))
+  for (int i = std::max(gx - coverageSize, 0);
+       i < std::min(gx + coverageSize + 1, getWidth()); i++)
   {
-    ROS_ERROR(
-        "Partition::setCovered() - Tried to access element outside partition.");
-    return;
+    for (int j = std::max(gy - coverageSize, 0);
+         j < std::min(gy + coverageSize + 1, getHeight()); j++)
+    {
+        m_grid[i][j].isCovered = isCovered;
+    }
   }
-  m_grid[gx][gy].isCovered = isCovered;
 }
 
 int Partition::getHeight() const { return m_height; }

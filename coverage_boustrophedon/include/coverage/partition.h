@@ -39,7 +39,7 @@ public:
   Status getStatus(int gx, int gy);
   void setStatus(int gx, int gy, Status status);
   bool isCovered(int gx, int gy);
-  void setCovered(int gx, int gy, bool isCovered);
+  void setCovered(int gx, int gy, bool isCovered, int coverageSize = 0);
   int getWidth() const;
   int getHeight() const;
   bool withinGridBounds(int gx, int gy);

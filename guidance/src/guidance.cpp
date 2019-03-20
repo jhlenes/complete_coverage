@@ -63,7 +63,7 @@ void Guidance::followPath(double x, double y, double psi)
   {
     otter_control::SpeedCourse msg;
     msg.u = 0.0;
-    msg.psi = 0.0;
+    msg.psi = psi;
     m_controllerPub.publish(msg);
     return;
   }

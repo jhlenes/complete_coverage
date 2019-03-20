@@ -48,10 +48,10 @@ private:
 
   void mapCallback(const nav_msgs::OccupancyGrid& m_grid);
   void mainLoop(ros::NodeHandle nh);
-  bool updatePose(const tf2_ros::Buffer& tfBuffer);
+  bool updatePose();
   void boustrophedonCoverage(int gx, int gy, Goal goal);
   Goal updateWPs(int gx, int gy);
-  bool checkDirection(Direction dir, int gx, int gy);
+  bool checkDirection(Direction dir, int gx, int gy, int& newX, int& newY);
   bool isFree(int gx, int gy, bool allowUnknown);
   bool locateBestBacktrackingPoint(int& goalX, int& goalY, int gx, int gy);
   bool blockedOrCovered(int gx, int gy);
@@ -60,6 +60,13 @@ private:
   void publishGoal(int gx, int gy, Goal goal);
 
   bool m_mapInitialized;
+
+  std::vector<Direction> m_priorities = {North, South, East, West};
+
+  Direction m_dir;
+  Direction m_lastDir = North;
+  int m_trackX = 0;
+  int m_trackY = 0;
 
   // ROS parameters
   double m_x0;
@@ -79,8 +86,12 @@ private:
   std::deque<Tile> m_waypoints;
 
   Partition m_partition;
+
   Pose m_pose;
+
   bool m_finished = false;
+
+  int m_coverageSize;
 };
 
 } // namespace otter_coverage

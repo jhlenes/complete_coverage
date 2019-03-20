@@ -346,17 +346,16 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   double y_cr;
   turningCenter(x_q, y_q, theta_q, x_cr, y_cr, dir);
 
-  // Perform checks
-  if (m_turningRadius >
-      std::sqrt(std::pow(x_q - x_n, 2) + std::pow(y_q - y_n, 2)) / 2)
-  {
-    ROS_WARN("The desired turning radius is larger than half the length "
-             "between the waypoint.");
-  }
+  // Perform check
   if (std::sqrt(std::pow(x_n - x_cr, 2) + std::pow(y_n - y_cr, 2)) <
       m_turningRadius)
   {
-    ROS_ERROR("Target not reachable with simple Dubin's path.");
+    ROS_WARN("Target not reachable with simple Dubin's path. Generating straight line instead.");
+    path.header.stamp = ros::Time::now();
+    path.header.frame_id = "map";
+    path.poses.clear();
+    path.poses.push_back(start);
+    path.poses.push_back(goal);
     return false;
   }
 

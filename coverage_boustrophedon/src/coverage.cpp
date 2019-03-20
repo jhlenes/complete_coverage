@@ -23,7 +23,7 @@ Coverage::Coverage()
   // Get parameters
   m_x0 = nhP.param("x0", -51);
   m_y0 = nhP.param("y0", -51);
-  m_x1 = nhP.param("x1", 100);
+  m_x1 = nhP.param("x1", 50);
   m_y1 = nhP.param("y1", 50);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
   m_scanRange = nhP.param("scan_range", 24.5);
@@ -32,6 +32,9 @@ Coverage::Coverage()
   // Set up partition
   m_partition.initialize(nh, m_x0, m_y0, m_x1, m_y1, m_tileResolution,
                          m_scanRange);
+
+  // TODO: remove
+  m_coverageSize = 5;
 
   // Set up subscribers
   ros::Subscriber sub =
@@ -58,13 +61,10 @@ void Coverage::mapCallback(const nav_msgs::OccupancyGrid& grid)
 
 void Coverage::mainLoop(ros::NodeHandle nh)
 {
-  tf2_ros::Buffer tfBuffer;
-  tf2_ros::TransformListener tfListener(tfBuffer);
-
   ros::Rate rate(5.0);
   while (nh.ok())
   {
-    if (!updatePose(tfBuffer))
+    if (!updatePose())
     {
       ROS_WARN("Transform from map to base_link not found.");
       ros::Duration(1.0).sleep();
@@ -87,8 +87,11 @@ void Coverage::mainLoop(ros::NodeHandle nh)
   }
 }
 
-bool Coverage::updatePose(const tf2_ros::Buffer& tfBuffer)
+bool Coverage::updatePose()
 {
+  static tf2_ros::Buffer tfBuffer;
+  static tf2_ros::TransformListener tfListener(tfBuffer);
+
   geometry_msgs::TransformStamped tfStamped;
   try
   {
@@ -110,24 +113,27 @@ bool Coverage::updatePose(const tf2_ros::Buffer& tfBuffer)
 
 void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
 {
+  const auto priorities = m_priorities;
   if (goal.reached)
   {
     // Check to find the next target in north-south-east-west priority.
-    if (checkDirection(North, gx, gy))
+    int newX;
+    int newY;
+    if (checkDirection(priorities[0], goal.gx, goal.gy, newX, newY))
     {
-      m_waypoints.push_back({gx + 1, gy});
+      m_waypoints.push_back({newX, newY});
     }
-    else if (checkDirection(South, gx, gy))
+    else if (checkDirection(priorities[1], goal.gx, goal.gy, newX, newY))
     {
-      m_waypoints.push_back({gx - 1, gy});
+      m_waypoints.push_back({newX, newY});
     }
-    else if (checkDirection(East, gx, gy))
+    else if (checkDirection(priorities[2], goal.gx, goal.gy, newX, newY))
     {
-      m_waypoints.push_back({gx, gy - 1});
+      m_waypoints.push_back({newX, newY});
     }
-    else if (checkDirection(West, gx, gy))
+    else if (checkDirection(priorities[3], goal.gx, goal.gy, newX, newY))
     {
-      m_waypoints.push_back({gx, gy + 1});
+      m_waypoints.push_back({newX, newY});
     }
     else
     {
@@ -174,7 +180,7 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
     m_partition.gridToWorld(goal.gx, goal.gy, goalX, goalY);
     if (m_partition.dist(goalX, goalY, m_pose.x, m_pose.y) < m_goalTolerance)
     {
-      m_partition.setCovered(goal.gx, goal.gy, true);
+      m_partition.setCovered(goal.gx, goal.gy, true, m_coverageSize);
       goal.reached = true;
     }
 
@@ -199,8 +205,6 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
   {
     publishGoal(gx, gy, goal);
     goalPublished = true;
-    ROS_INFO_STREAM("Moving to +x: " << goal.gx - gx
-                                     << " +y: " << goal.gy - gy);
   }
 
   // Finished
@@ -319,14 +323,20 @@ bool Coverage::locateBestBacktrackingPoint(int& goalX, int& goalY, int tileX,
     }
   }
 
+  // TODO: search for any free reachable cell
+
   if (minDistance < 0)
     return false;
 
   return true;
 }
 
-bool Coverage::checkDirection(Direction dir, int gx, int gy)
+bool Coverage::checkDirection(Direction dir, int gx, int gy, int& newX,
+                              int& newY)
 {
+  // Check along the supplied direction until free or blocked space is
+  // discovered
+
   int xOffset, yOffset;
   switch (dir)
   {
@@ -347,11 +357,98 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
     yOffset = 1;
     break;
   }
-  if (!m_partition.withinGridBounds(gx + xOffset, gy + yOffset))
+
+  // Iterate along direction
+  newX = gx;
+  newY = gy;
+  while (m_partition.withinGridBounds(newX + xOffset, newY + yOffset))
   {
-    return false;
+    newX += xOffset;
+    newY += yOffset;
+    if (std::abs(newX - gx) > 2 * m_coverageSize ||
+        std::abs(newY - gy) > 2 * m_coverageSize)
+    {
+      break;
+    }
+
+    // Straight ahead is blocked? Wall follow one cell to either direction
+    // TODO: More robust wall following
+    if (m_partition.getStatus(newX, newY) == Partition::Blocked)
+    {
+      if (m_partition.withinGridBounds(newX + yOffset, newY + xOffset) &&
+          m_partition.getStatus(newX + yOffset, newY + xOffset) ==
+              Partition::Free)
+      {
+        newX += yOffset;
+        newY += xOffset;
+      }
+      else if (m_partition.withinGridBounds(newX - yOffset, newY - xOffset) &&
+               m_partition.getStatus(newX - yOffset, newY - xOffset) ==
+                   Partition::Free)
+      {
+        newX -= yOffset;
+        newY -= xOffset;
+      }
+      else
+      {
+        // This direction is blocked
+        return false;
+      }
+
+      // When movement in perpendicular direction is greater than
+      // coverageSize, stop wall following
+      if (((m_dir == North || m_dir == South) &&
+           std::abs(newY - m_trackY) > 2 * m_coverageSize) ||
+          ((m_dir == East || m_dir == West) &&
+           std::abs(newX - m_trackX) > 2 * m_coverageSize))
+      {
+        return false;
+      }
+    }
+
+    // Check for uncovered cells perpendicular to direction
+    for (int j = -m_coverageSize; j <= m_coverageSize; j++)
+    {
+      int x2 = newX + yOffset * j;
+      int y2 = newY + xOffset * j;
+      if (m_partition.withinGridBounds(x2, y2) && freeAndNotCovered(x2, y2))
+      {
+        if (dir != m_dir)
+        {
+          if (dir == South)
+          {
+            m_priorities[0] = South;
+            m_priorities[1] = North;
+          }
+          else
+          {
+            m_priorities[0] = North;
+            m_priorities[1] = South;
+          }
+          if (dir == West)
+          {
+            m_priorities[2] = West;
+            m_priorities[3] = East;
+          }
+          else
+          {
+            m_priorities[2] = East;
+            m_priorities[3] = West;
+          }
+
+          m_lastDir = m_dir;
+          m_dir = dir;
+          m_trackX = gx;
+          m_trackY = gy;
+
+          ROS_INFO_STREAM("Moving: " << dir);
+        }
+        return true;
+      }
+    }
   }
-  return freeAndNotCovered(gx + xOffset, gy + yOffset);
+
+  return false;
 }
 
 void Coverage::publishGoal(int gx, int gy, Goal goal)
@@ -377,13 +474,13 @@ void Coverage::publishGoal(int gx, int gy, Goal goal)
   goalPose.header.frame_id = "map";
   double x, y;
   m_partition.gridToWorld(goal.gx, goal.gy, x, y);
-  double yaw;
-  dubin.getTargetHeading(m_pose.x, m_pose.y, m_pose.psi, x, y, yaw);
+  // double yaw;
+  // dubin.getTargetHeading(m_pose.x, m_pose.y, m_pose.psi, x, y, yaw);
   goalPose.pose.position.x = x;
   goalPose.pose.position.y = y;
   goalPose.pose.position.z = 0.0;
-  // double yaw = std::atan2(y - lastPose.pose.position.y, x -
-  // lastPose.pose.position.x);
+  double yaw =
+      std::atan2(y - startPose.pose.position.y, x - startPose.pose.position.x);
   q.setRPY(0, 0, yaw);
   goalPose.pose.orientation.x = q.x();
   goalPose.pose.orientation.y = q.y();
