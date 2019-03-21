@@ -4,7 +4,7 @@
   <node name="nmeaNode" pkg="nmea_navsat_driver" type="nmea_socket_driver" >
     <!-- <param name="time_ref_source" type="string" value="" /> -->
     <param name="useRMC" type="bool" value="false" />
-    <param name="ip" type="string" value="telemetron" />
+    <param name="ip" type="string" value="192.168.53.2" />
     <param name="port" type="int" value="2002" />
 
     <remap from="fix" to="gps/fix" />

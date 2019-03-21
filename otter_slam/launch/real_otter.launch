@@ -11,11 +11,12 @@
   <include file="$(find sensors)/launch/lidar.launch" if="$(arg sensors)" />
 
   <!-- Start the Xsens IMU -->
-  <!--<include file="$(find sensors)/launch/imu.launch" if="$(arg sensors)" />-->
+  <include file="$(find sensors)/launch/imu.launch" if="$(arg sensors)" />
 
-  <!-- TODO: Start the GPS -->
+  <!-- Start the GPS -->
+  <include file="$(find sensors)/launch/gps.launch" if="$(arg sensors)" />
 
-  <node pkg="sensors" type="android_filter_node" name="android_filter_node" />
+  <!--<node pkg="sensors" type="android_filter_node" name="android_filter_node" />-->
 
   <!-- Generate odom from IMU/GPS -->
   <include file="$(find sensors)/launch/localization.launch" if="$(arg sensors)" />

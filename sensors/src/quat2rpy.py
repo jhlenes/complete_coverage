@@ -5,6 +5,7 @@ Node to convert from quaternions to rpy in various ROS messages
 
 import rospy
 import tf
+import math
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseArray
@@ -47,9 +48,9 @@ class Node():
              data.orientation.z,
              data.orientation.w)
         euler = tf.transformations.euler_from_quaternion(q)
-        self.pubmsg.x = euler[0]
-        self.pubmsg.y = euler[1]
-        self.pubmsg.z = euler[2]
+        self.pubmsg.x = euler[0] * 180 / math.pi
+        self.pubmsg.y = euler[1] * 180 / math.pi
+        self.pubmsg.z = euler[2] * 180 / math.pi
         rospy.logdebug("publishing rpy: %.2f, %.2f, %.2f"
                       %(euler[0],euler[1],euler[2]))
         self.pub.publish(self.pubmsg)
