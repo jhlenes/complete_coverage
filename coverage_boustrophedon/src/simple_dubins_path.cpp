@@ -14,7 +14,7 @@ SimpleDubinsPath::SimpleDubinsPath()
   ros::NodeHandle nh;
   ros::NodeHandle private_nh("~");
 
-  m_turningRadius = private_nh.param("turning_radius", 1.5);
+  m_turningRadius = private_nh.param("turning_radius", 1.0);
   m_pathResolution = private_nh.param("path_resolution", 0.05);
 
   ros::Subscriber inputSub = nh.subscribe("simple_dubins_path/input", 1000,
@@ -34,11 +34,9 @@ SimpleDubinsPath::SimpleDubinsPath()
 }
 
 SimpleDubinsPath::SimpleDubinsPath(double turningRadius, double pathResolution)
-    : m_turningRadius(turningRadius)
-    , m_pathResolution(pathResolution)
+    : m_turningRadius(turningRadius), m_pathResolution(pathResolution)
 {
 }
-
 
 SimpleDubinsPath::~SimpleDubinsPath() {}
 
@@ -326,6 +324,40 @@ void SimpleDubinsPath::generatePath(double x_q, double y_q, double x_n,
   path.poses.push_back(goal);
 }
 
+void SimpleDubinsPath::generateStraightPath(
+    const geometry_msgs::PoseStamped& start,
+    const geometry_msgs::PoseStamped& goal, nav_msgs::Path& path)
+{
+  path.header.stamp = ros::Time::now();
+  path.header.frame_id = "map";
+  path.poses.clear();
+
+  double dx = goal.pose.position.x - start.pose.position.x;
+  double dy = goal.pose.position.y - start.pose.position.y;
+  double dx_norm = dx / std::sqrt(dx * dx + dy * dy);
+  double dy_norm = dy / std::sqrt(dx * dx + dy * dy);
+  tf2::Quaternion q;
+  q.setRPY(0, 0, std::atan2(dy, dx));
+
+  // generate straight line segment
+  for (double i = 0;
+       std::fabs(i * m_pathResolution * dx_norm - dx) > 2 * m_pathResolution ||
+       std::fabs(i * m_pathResolution * dy_norm - dy) > 2 * m_pathResolution;
+       ++i)
+  {
+    geometry_msgs::PoseStamped point;
+    point.header.stamp = ros::Time::now();
+    point.header.frame_id = "map";
+    point.pose.position.x = start.pose.position.x + i * m_pathResolution * dx_norm;
+    point.pose.position.y = start.pose.position.y + i * m_pathResolution * dy_norm;
+    point.pose.orientation.x = q.x();
+    point.pose.orientation.y = q.y();
+    point.pose.orientation.z = q.z();
+    point.pose.orientation.w = q.w();
+    path.poses.push_back(point);
+  }
+}
+
 bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
                                 const geometry_msgs::PoseStamped& goal,
                                 nav_msgs::Path& path)
@@ -350,13 +382,10 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   if (std::sqrt(std::pow(x_n - x_cr, 2) + std::pow(y_n - y_cr, 2)) <
       m_turningRadius)
   {
-    ROS_WARN("Target not reachable with simple Dubin's path. Generating straight line instead.");
-    path.header.stamp = ros::Time::now();
-    path.header.frame_id = "map";
-    path.poses.clear();
-    path.poses.push_back(start);
-    path.poses.push_back(goal);
-    return false;
+    ROS_WARN("Target not reachable with simple Dubin's path. Generating "
+             "straight line instead.");
+    generateStraightPath(start, goal, path);
+    return true;
   }
 
   // Find angle of tangent line from target to turning circle

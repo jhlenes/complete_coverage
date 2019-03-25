@@ -88,8 +88,8 @@ void Coverage::mainLoop(ros::NodeHandle nh)
         m_trackY = gy;
       }
 
-      //ROS_INFO_STREAM("Current pos: " << gx << ", " << gy);
-      //ROS_INFO_STREAM("Current goal: " << goal.gx << ", " << goal.gy);
+      // ROS_INFO_STREAM("Current pos: " << gx << ", " << gy);
+      // ROS_INFO_STREAM("Current goal: " << goal.gx << ", " << goal.gy);
     }
 
     ros::spinOnce();
@@ -356,31 +356,27 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
   int xOffset = (dir == North ? 1 : -1);
 
   bool goalAdded = false;
-  for (int x = gx + xOffset; std::abs(x - gx) != m_coverageSize * 2;
-       x += xOffset)
-  {
-    // Straight ahead is free?
-    if (!m_partition.withinGridBounds(x, gy) ||
-        m_partition.getStatus(x, gy) != Partition::Free)
-    {
-      break;
-    }
 
+  // Straight ahead is free?
+  if (m_partition.withinGridBounds(gx + xOffset, gy) &&
+      m_partition.getStatus(gx + xOffset, gy) == Partition::Free)
+  {
     // Any free uncovered cells in moving direction within coverage size?
-    for (int j = -m_coverageSize; j <= m_coverageSize; j++)
+    for (int x = gx + xOffset; std::abs(x - gx) <= 2 * m_coverageSize; x += xOffset)
     {
-      int y = gy + j;
-      if (m_partition.withinGridBounds(x, y) && freeAndNotCovered(x, y))
+      for (int j = -m_coverageSize; j <= m_coverageSize; j++)
       {
-        // Add goal
-        m_waypoints.push_back({x, gy});
-        goalAdded = true;
-        break;
+        int y = gy + j;
+        if (m_partition.withinGridBounds(x, y) &&
+            freeAndNotCovered(x, y))
+        {
+          // Add goal
+          m_waypoints.push_back({gx + xOffset, gy});
+          return true;
+        }
       }
     }
   }
-  if (goalAdded)
-    return true;
 
   // Straight ahead is blocked => Wall follow if free cells to either side
   ROS_INFO_STREAM("Straight ahead blocked!");
@@ -397,7 +393,7 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
   {
     for (int x = gx; x != m_trackX; x -= xOffset)
     {
-      //ROS_INFO_STREAM("Checking sides: x: " << x << " y: " << y);
+      ROS_INFO_STREAM("Checking sides: x: " << x << " y: " << y);
       if (freeAndNotCovered(x, y))
       {
         wallFollow = true;
@@ -413,32 +409,36 @@ endloop:
     ROS_INFO_STREAM("Wall following!");
 
     int nextX = gx + xOffset;
-    for (int y = gy + yOffset;
-         std::abs(y - m_trackY) != m_coverageSize * 2; y += yOffset)
+    for (int y = gy + yOffset; std::abs(y - m_trackY) != m_coverageSize * 2;
+         y += yOffset)
     {
-      for (int x = nextX;
-           std::abs(x - nextX) <= 2 * m_coverageSize; x -= xOffset)
+      for (int x = nextX; std::abs(x - nextX) <= 2 * m_coverageSize;
+           x -= xOffset)
       {
 
         if (m_partition.withinGridBounds(x, y) &&
             m_partition.getStatus(x, y) == Partition::Free)
         {
-            // Add goal
-            m_waypoints.push_back({x, y});
-            goalAdded = true;
-            nextX = x + xOffset;
-            ROS_INFO_STREAM("Wall following goal added: " << x << ", " << y);
-            return true;
+          // Add goal
+          m_waypoints.push_back({x, y});
+          goalAdded = true;
+          nextX = x + xOffset;
+          ROS_INFO_STREAM("Wall following goal added: " << x << ", " << y);
+          return true;
         }
       }
     }
   }
 
   // Finished wall following? Switch direction
-  if (wallFollow) {
-      m_dir = (m_dir == North ? South : North);
+  if (wallFollow)
+  {
+    m_dir = (m_dir == North ? South : North);
+    m_trackX = gx;
+    m_trackY = gy;
+    ROS_INFO_STREAM("Switching direction to "
+                    << (m_dir == North ? "North" : "South"));
   }
-
 
   // Are there any free uncovered cells in opposite direction? Change
   // direction
@@ -446,6 +446,7 @@ endloop:
   // Are there any free uncovered cells in opposite sweep direction? Change
   // sweep direction and wall follow
 
+  ROS_INFO_STREAM("Nothing to do...");
   return false;
 }
 

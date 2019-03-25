@@ -45,6 +45,9 @@ private:
                     double y_cr, double x_lc, double y_lc, Dir dir,
                     const geometry_msgs::PoseStamped& goal,
                     nav_msgs::Path& path);
+  void generateStraightPath(const geometry_msgs::PoseStamped& start,
+                            const geometry_msgs::PoseStamped& goal,
+                            nav_msgs::Path& path);
 
   double m_turningRadius;
   double m_pathResolution;
