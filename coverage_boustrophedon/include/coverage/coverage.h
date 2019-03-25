@@ -51,7 +51,7 @@ private:
   bool updatePose();
   void boustrophedonCoverage(int gx, int gy, Goal goal);
   Goal updateWPs(int gx, int gy);
-  bool checkDirection(Direction dir, int gx, int gy, int& newX, int& newY);
+  bool checkDirection(Direction dir, int gx, int gy);
   bool isFree(int gx, int gy, bool allowUnknown);
   bool locateBestBacktrackingPoint(int& goalX, int& goalY, int gx, int gy);
   bool blockedOrCovered(int gx, int gy);
@@ -63,8 +63,9 @@ private:
 
   std::vector<Direction> m_priorities = {North, South, East, West};
 
-  Direction m_dir;
-  Direction m_lastDir = North;
+  bool m_dirInitialized = false;
+  Direction m_dir = North;
+  Direction m_sweepDir = East;
   int m_trackX = 0;
   int m_trackY = 0;
 

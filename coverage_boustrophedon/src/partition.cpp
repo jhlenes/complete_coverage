@@ -198,14 +198,10 @@ bool Partition::isCovered(int gx, int gy)
 
 void Partition::setCovered(int gx, int gy, bool isCovered, int coverageSize)
 {
-  for (int i = std::max(gx - coverageSize, 0);
-       i < std::min(gx + coverageSize + 1, getWidth()); i++)
+  for (int j = std::max(gy - coverageSize, 0);
+       j < std::min(gy + coverageSize + 1, getHeight()); j++)
   {
-    for (int j = std::max(gy - coverageSize, 0);
-         j < std::min(gy + coverageSize + 1, getHeight()); j++)
-    {
-        m_grid[i][j].isCovered = isCovered;
-    }
+    m_grid[gx][j].isCovered = isCovered;
   }
 }
 
