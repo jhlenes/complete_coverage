@@ -379,11 +379,11 @@ bool SimpleDubinsPath::makePath(const geometry_msgs::PoseStamped& start,
   turningCenter(x_q, y_q, theta_q, x_cr, y_cr, dir);
 
   // Perform check
-  if (std::sqrt(std::pow(x_n - x_cr, 2) + std::pow(y_n - y_cr, 2)) <
+  if (true || std::sqrt(std::pow(x_n - x_cr, 2) + std::pow(y_n - y_cr, 2)) <
       m_turningRadius)
   {
-    ROS_WARN("Target not reachable with simple Dubin's path. Generating "
-             "straight line instead.");
+    //ROS_WARN("Target not reachable with simple Dubin's path. Generating "
+    //         "straight line instead.");
     generateStraightPath(start, goal, path);
     return true;
   }

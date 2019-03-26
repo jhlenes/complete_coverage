@@ -68,6 +68,7 @@ private:
   Direction m_sweepDir = East;
   int m_trackX = 0;
   int m_trackY = 0;
+  bool m_wallFollowing = false;
 
   // ROS parameters
   double m_x0;

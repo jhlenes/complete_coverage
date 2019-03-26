@@ -64,19 +64,13 @@ void Partition::drawPartition()
       marker.scale.y = m_cellSize;
       marker.scale.z = 0.01;
 
-      if (m_grid[gx][gy].status == Blocked)
-      {
-        marker.color.r = 1.0f;
-        marker.color.g = 0.0f;
-        marker.color.b = 0.0f;
-      }
-      else if (m_grid[gx][gy].status == Free)
+      if (m_grid[gx][gy].status == Free)
       {
         marker.color.r = 0.0f;
         marker.color.g = 1.0f;
         marker.color.b = 1.0f;
       }
-      if (m_grid[gx][gy].status == Unknown)
+      else if (m_grid[gx][gy].status == Unknown)
       {
         marker.color.r = 0.0f;
         marker.color.g = 0.0f;
@@ -88,7 +82,14 @@ void Partition::drawPartition()
         marker.color.g = 1.0f;
         marker.color.b = 0.0f;
       }
-      marker.color.a = 0.1f;
+      if (m_grid[gx][gy].status == Blocked)
+      {
+        marker.color.r = 1.0f;
+        marker.color.g = 0.0f;
+        marker.color.b = 0.0f;
+      }
+      else
+      marker.color.a = 0.2f;
 
       marker.lifetime = ros::Duration(0.0);
       markerArray.markers.push_back(marker);

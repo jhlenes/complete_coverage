@@ -22,8 +22,8 @@ Coverage::Coverage()
 
   // Get parameters
   m_x0 = nhP.param("x0", -51);
-  m_y0 = nhP.param("y0", -51);
-  m_x1 = nhP.param("x1", 50);
+  m_y0 = nhP.param("y0", -10);
+  m_x1 = nhP.param("x1", 10);
   m_y1 = nhP.param("y1", 50);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
   m_scanRange = nhP.param("scan_range", 24.5);
@@ -129,33 +129,9 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
     {
       ROS_INFO_STREAM("Moving straight.");
     }
-  }
-
-#if 0
-  const auto priorities = m_priorities;
-  if (goal.reached)
-  {
-    // Check to find the next target in north-south-east-west priority.
-    int newX;
-    int newY;
-    if (checkDirection(priorities[0], goal.gx, goal.gy, newX, newY))
-    {
-      m_waypoints.push_back({newX, newY});
-    }
-    else if (checkDirection(priorities[1], goal.gx, goal.gy, newX, newY))
-    {
-      m_waypoints.push_back({newX, newY});
-    }
-    else if (checkDirection(priorities[2], goal.gx, goal.gy, newX, newY))
-    {
-      m_waypoints.push_back({newX, newY});
-    }
-    else if (checkDirection(priorities[3], goal.gx, goal.gy, newX, newY))
-    {
-      m_waypoints.push_back({newX, newY});
-    }
     else
     {
+      ROS_INFO_STREAM("Backtracking.");
       // If all directions are blocked, then a critical point has been reached
       int bpX, bpY;
       if (locateBestBacktrackingPoint(bpX, bpY, gx, gy))
@@ -166,6 +142,12 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
         {
           m_waypoints.push_back(*it);
         }
+        if (freeAndNotCovered(bpX - 1, bpY))
+          m_dir = South;
+        else
+          m_dir = North;
+        m_trackX = bpX;
+        m_trackY = bpY;
       }
       else
       {
@@ -173,7 +155,6 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       }
     }
   }
-#endif
 }
 
 Coverage::Goal Coverage::updateWPs(int gx, int gy)
@@ -235,6 +216,7 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
   {
     ROS_INFO("Finished!");
     finished = true;
+    m_wallFollowing = false;
     static bool goingToStart = false;
 
     // Go to start
@@ -314,10 +296,16 @@ bool Coverage::isBacktrackingPoint(int gx, int gy)
         freeAndNotCovered(gx - 1, gy) &&
         (blockedOrCovered(gx - 1, gy + 1) || blockedOrCovered(gx - 1, gy - 1));
   }
-  // Note: north can not be a BP because of the north-south-east-west check
-  // priority.
 
-  return eastBP || westBP || southBP;
+  bool northBP = false;
+  if (gx + 1 >= 0)
+  {
+    northBP =
+        freeAndNotCovered(gx + 1, gy) &&
+        (blockedOrCovered(gx + 1, gy + 1) || blockedOrCovered(gx + 1, gy - 1));
+  }
+
+  return eastBP || westBP || southBP || northBP;
 }
 
 bool Coverage::locateBestBacktrackingPoint(int& goalX, int& goalY, int tileX,
@@ -330,14 +318,18 @@ bool Coverage::locateBestBacktrackingPoint(int& goalX, int& goalY, int tileX,
     {
       if (isBacktrackingPoint(gx, gy))
       {
-        // TODO: change to A*SPT distance
-        int distance =
-            int(aStarSearch(m_partition, {tileX, tileY}, {gx, gy}).size());
-        if (distance < minDistance || minDistance < 0)
+        double prelimDist = std::pow(gx - tileX, 2) + std::pow(gy - tileY, 2);
+        if (prelimDist < minDistance || minDistance < 0)
         {
-          minDistance = distance;
-          goalX = gx;
-          goalY = gy;
+          // TODO: change to A*SPT distance
+          int distance =
+              int(aStarSearch(m_partition, {tileX, tileY}, {gx, gy}).size());
+          if (distance < minDistance || minDistance < 0)
+          {
+            minDistance = distance;
+            goalX = gx;
+            goalY = gy;
+          }
         }
       }
     }
@@ -355,20 +347,19 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
 {
   int xOffset = (dir == North ? 1 : -1);
 
-  bool goalAdded = false;
-
+  bool coveredWallFollowing = false;
   // Straight ahead is free?
   if (m_partition.withinGridBounds(gx + xOffset, gy) &&
       m_partition.getStatus(gx + xOffset, gy) == Partition::Free)
   {
     // Any free uncovered cells in moving direction within coverage size?
-    for (int x = gx + xOffset; std::abs(x - gx) <= 2 * m_coverageSize; x += xOffset)
+    for (int x = gx + xOffset; std::abs(x - gx) <= 2 * m_coverageSize;
+         x += xOffset)
     {
       for (int j = -m_coverageSize; j <= m_coverageSize; j++)
       {
         int y = gy + j;
-        if (m_partition.withinGridBounds(x, y) &&
-            freeAndNotCovered(x, y))
+        if (m_partition.withinGridBounds(x, y) && freeAndNotCovered(x, y))
         {
           // Add goal
           m_waypoints.push_back({gx + xOffset, gy});
@@ -376,6 +367,9 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
         }
       }
     }
+
+    // Only covered cells ahead
+    coveredWallFollowing = true;
   }
 
   // Straight ahead is blocked => Wall follow if free cells to either side
@@ -386,30 +380,48 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
   ROS_INFO_STREAM("trackX: " << m_trackX << ", trackY: " << m_trackY);
 
   // Check if free cells in sweep direction
-  bool wallFollow = false;
-  int targetY = gy;
-  for (int y = m_trackY + yOffset; std::abs(y - m_trackY) != m_coverageSize * 2;
-       y += yOffset)
+  if (!m_wallFollowing)
   {
-    for (int x = gx; x != m_trackX; x -= xOffset)
+    ROS_INFO_STREAM("Checking if we should do wall following.");
+    for (int y = m_trackY + yOffset;
+         std::abs(y - m_trackY) != m_coverageSize * 2; y += yOffset)
     {
-      ROS_INFO_STREAM("Checking sides: x: " << x << " y: " << y);
-      if (freeAndNotCovered(x, y))
+      for (int x = gx + xOffset; x != m_trackX; x -= xOffset)
       {
-        wallFollow = true;
-        targetY = y;
-        goto endloop;
+        if (freeAndNotCovered(x, y))
+        {
+          m_wallFollowing = true;
+          goto endloop;
+        }
+      }
+    }
+
+    // Check opposite sweep direction
+    for (int y = m_trackY + yOffset;
+         std::abs(y - m_trackY) != m_coverageSize * 2; y -= yOffset)
+    {
+      for (int x = gx + xOffset; x != m_trackX; x -= xOffset)
+      {
+        if (freeAndNotCovered(x, y))
+        {
+          m_wallFollowing = true;
+          m_sweepDir = (m_sweepDir == East ? West : East);
+          yOffset *= -1;
+          ROS_INFO_STREAM("Switching sweep direction to "
+                          << (m_sweepDir == East ? "East" : "West"));
+          goto endloop;
+        }
       }
     }
   }
 endloop:
 
-  if (wallFollow)
+  if (m_wallFollowing)
   {
     ROS_INFO_STREAM("Wall following!");
 
     int nextX = gx + xOffset;
-    for (int y = gy + yOffset; std::abs(y - m_trackY) != m_coverageSize * 2;
+    for (int y = gy + yOffset; std::abs(y - m_trackY) != m_coverageSize * 2 + 2;
          y += yOffset)
     {
       for (int x = nextX; std::abs(x - nextX) <= 2 * m_coverageSize;
@@ -419,10 +431,10 @@ endloop:
         if (m_partition.withinGridBounds(x, y) &&
             m_partition.getStatus(x, y) == Partition::Free)
         {
+          if (coveredWallFollowing && m_partition.isCovered(x, y))
+            break;
           // Add goal
           m_waypoints.push_back({x, y});
-          goalAdded = true;
-          nextX = x + xOffset;
           ROS_INFO_STREAM("Wall following goal added: " << x << ", " << y);
           return true;
         }
@@ -431,13 +443,15 @@ endloop:
   }
 
   // Finished wall following? Switch direction
-  if (wallFollow)
+  if (m_wallFollowing)
   {
     m_dir = (m_dir == North ? South : North);
     m_trackX = gx;
     m_trackY = gy;
     ROS_INFO_STREAM("Switching direction to "
                     << (m_dir == North ? "North" : "South"));
+    m_wallFollowing = false;
+    return true;
   }
 
   // Are there any free uncovered cells in opposite direction? Change

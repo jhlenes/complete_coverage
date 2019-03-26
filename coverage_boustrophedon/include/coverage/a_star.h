@@ -37,7 +37,7 @@ static void aStarNeighbor(Partition partition, Node q, int dx, int dy,
 {
   int ngx = q.gx + dx;
   int ngy = q.gy + dy;
-  if (partition.withinGridBounds(ngx, ngy) && partition.isCovered(ngx, ngy))
+  if (partition.withinGridBounds(ngx, ngy) && partition.isCovered(ngx, ngy) && partition.getStatus(ngx, ngy) == Partition::Free)
   {
     Node node(ngx, ngy, q.gx, q.gy);
     node.g = q.g + 1;
