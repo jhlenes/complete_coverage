@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>mr_obs_connector</name>
+  <version>0.0.0</version>
+  <description>The mr_obs_connector package</description>
+
+  <maintainer email="jhlenes@outlook.com">henrik</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>rospy</depend>
+  <depend>usv_msgs</depend>
+</package>
