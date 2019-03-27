@@ -140,8 +140,8 @@ void Guidance::followPath(double x, double y, double psi)
   msg.course = chi_d;
   m_controllerPub.publish(msg);
 
-  ROS_INFO_STREAM("psi_d: " << chi_d << " psi: " << psi);
-  ROS_INFO_STREAM("u_d: " << u);
+  //ROS_INFO_STREAM("psi_d: " << chi_d << " psi: " << psi);
+  //ROS_INFO_STREAM("u_d: " << u);
 
 }
 

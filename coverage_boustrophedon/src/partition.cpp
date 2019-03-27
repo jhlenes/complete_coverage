@@ -36,19 +36,22 @@ void Partition::initialize(ros::NodeHandle nh, double x0, double y0, double x1,
   m_grid = grid;
 }
 
-void Partition::drawPartition()
+void Partition::drawPartition(int gx, int gy)
 {
   if (!m_initialized)
     return;
 
+  int rangeCells = m_scanRange / m_cellSize + 1;
+
   visualization_msgs::MarkerArray markerArray;
-  int id = 0;
-  for (int gx = 0; gx < m_width; gx++)
+  for (int x = std::max(0, gx - rangeCells); x < std::min(m_width, gx + rangeCells); x++)
   {
-    for (int gy = 0; gy < m_height; gy++)
+    for (int y = std::max(0, gy - rangeCells); y < std::min(m_height, gy + rangeCells); y++)
     {
+      int id = m_height * x + y;
+
       double wx, wy;
-      gridToWorld(gx, gy, wx, wy);
+      gridToWorld(x, y, wx, wy);
 
       visualization_msgs::Marker marker;
       marker.header.frame_id = "map";
@@ -64,32 +67,31 @@ void Partition::drawPartition()
       marker.scale.y = m_cellSize;
       marker.scale.z = 0.01;
 
-      if (m_grid[gx][gy].status == Free)
+      if (m_grid[x][y].status == Free)
       {
         marker.color.r = 0.0f;
         marker.color.g = 1.0f;
         marker.color.b = 1.0f;
       }
-      else if (m_grid[gx][gy].status == Unknown)
+      else if (m_grid[x][y].status == Unknown)
       {
         marker.color.r = 0.0f;
         marker.color.g = 0.0f;
-        marker.color.b = 1.0f;
+        marker.color.b = 0.5f;
       }
-      if (m_grid[gx][gy].isCovered)
+      if (m_grid[x][y].isCovered)
       {
         marker.color.r = 0.0f;
         marker.color.g = 1.0f;
         marker.color.b = 0.0f;
       }
-      if (m_grid[gx][gy].status == Blocked)
+      if (m_grid[x][y].status == Blocked)
       {
         marker.color.r = 1.0f;
         marker.color.g = 0.0f;
         marker.color.b = 0.0f;
       }
-      else
-      marker.color.a = 0.2f;
+      marker.color.a = 0.3f;
 
       marker.lifetime = ros::Duration(0.0);
       markerArray.markers.push_back(marker);
@@ -104,11 +106,11 @@ void Partition::update(const nav_msgs::OccupancyGrid& map, double wx, double wy)
   // Update the status of cells based on the map received in a region around the
   // position [x,y]
 
-  drawPartition();
-
   // Current cell
   int gx, gy;
   worldToGrid(wx, wy, gx, gy);
+
+  drawPartition(gx, gy);
 
   // Calculate status for all nearby cells
   std::vector<Point> neighbors;

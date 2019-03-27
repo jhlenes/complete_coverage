@@ -31,7 +31,7 @@ public:
   Partition();
   void initialize(ros::NodeHandle nh, double x0, double y0, double x1,
                   double y1, double cellSize, double scanRange);
-  void drawPartition();
+  void drawPartition(int gx, int gy);
   void update(const nav_msgs::OccupancyGrid& map, double x, double y);
   void getNeighbors(int gx, int gy, double dist, std::vector<Point>& neighbors);
   void gridToWorld(int gx, int gy, double& wx, double& wy);

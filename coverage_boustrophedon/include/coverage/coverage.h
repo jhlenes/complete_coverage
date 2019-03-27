@@ -53,10 +53,10 @@ private:
   Goal updateWPs(int gx, int gy);
   bool checkDirection(Direction dir, int gx, int gy);
   bool isFree(int gx, int gy, bool allowUnknown);
-  bool locateBestBacktrackingPoint(int& goalX, int& goalY, int gx, int gy);
+  bool locateBestBacktrackingPoint(int& goalX, int& goalY, int gx, int gy, std::vector<Tile> &bestPath);
   bool blockedOrCovered(int gx, int gy);
   bool freeAndNotCovered(int gx, int gy);
-  bool isBacktrackingPoint(int gx, int gy);
+  bool isBacktrackingPoint(int gx, int gy, Tile &bp);
   void publishGoal(int gx, int gy, Goal goal);
 
   bool m_mapInitialized;

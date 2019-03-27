@@ -22,8 +22,8 @@ Coverage::Coverage()
 
   // Get parameters
   m_x0 = nhP.param("x0", -51);
-  m_y0 = nhP.param("y0", -10);
-  m_x1 = nhP.param("x1", 10);
+  m_y0 = nhP.param("y0", -51);
+  m_x1 = nhP.param("x1", 100);
   m_y1 = nhP.param("y1", 50);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
   m_scanRange = nhP.param("scan_range", 24.5);
@@ -81,12 +81,20 @@ void Coverage::mainLoop(ros::NodeHandle nh)
 
       boustrophedonCoverage(gx, gy, goal);
 
+      static int prevGx = gx-1;
+      static int prevGy = gy-1;
+      if (gx != prevGx || gy != prevGy)
+        m_partition.setCovered(gx, gy, true, m_coverageSize);
+
       if (!m_dirInitialized)
       {
         m_dirInitialized = true;
         m_trackX = gx;
         m_trackY = gy;
       }
+
+      prevGx = gx;
+      prevGy = gy;
 
       // ROS_INFO_STREAM("Current pos: " << gx << ", " << gy);
       // ROS_INFO_STREAM("Current goal: " << goal.gx << ", " << goal.gy);
@@ -134,10 +142,10 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       ROS_INFO_STREAM("Backtracking.");
       // If all directions are blocked, then a critical point has been reached
       int bpX, bpY;
-      if (locateBestBacktrackingPoint(bpX, bpY, gx, gy))
+      std::vector<Tile> path;
+      if (locateBestBacktrackingPoint(bpX, bpY, gx, gy, path))
       {
         ROS_INFO("Critical point! Backtracking...");
-        auto path = aStarSearch(m_partition, {gx, gy}, {bpX, bpY});
         for (auto it = path.begin() + 1; it != path.end(); it++)
         {
           m_waypoints.push_back(*it);
@@ -148,6 +156,8 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
           m_dir = North;
         m_trackX = bpX;
         m_trackY = bpY;
+        // TODO: Go further in m_sweepDir. Now only utilizes half of coverageSize
+        // Iterate half coverageSize in each m_sweepDir until
       }
       else
       {
@@ -263,7 +273,7 @@ bool Coverage::freeAndNotCovered(int gx, int gy)
          !m_partition.isCovered(gx, gy);
 }
 
-bool Coverage::isBacktrackingPoint(int gx, int gy)
+bool Coverage::isBacktrackingPoint(int gx, int gy, Tile &bp)
 {
   if (!m_partition.isCovered(gx, gy))
   {
@@ -278,6 +288,10 @@ bool Coverage::isBacktrackingPoint(int gx, int gy)
         freeAndNotCovered(gx, gy - 1) &&
         (blockedOrCovered(gx + 1, gy - 1) || blockedOrCovered(gx - 1, gy - 1));
   }
+  if (eastBP) {
+      bp = {gx, gy - 1};
+      return true;
+  }
 
   // b(s5,s6) or b(s5,s4)
   bool westBP = false;
@@ -286,6 +300,10 @@ bool Coverage::isBacktrackingPoint(int gx, int gy)
     westBP =
         freeAndNotCovered(gx, gy + 1) &&
         (blockedOrCovered(gx + 1, gy + 1) || blockedOrCovered(gx - 1, gy + 1));
+  }
+  if (westBP) {
+      bp = {gx, gy + 1};
+      return true;
   }
 
   // b(s7,s6) or b(s7,s8)
@@ -296,6 +314,10 @@ bool Coverage::isBacktrackingPoint(int gx, int gy)
         freeAndNotCovered(gx - 1, gy) &&
         (blockedOrCovered(gx - 1, gy + 1) || blockedOrCovered(gx - 1, gy - 1));
   }
+  if (southBP) {
+      bp = {gx - 1, gy};
+      return true;
+  }
 
   bool northBP = false;
   if (gx + 1 >= 0)
@@ -304,31 +326,37 @@ bool Coverage::isBacktrackingPoint(int gx, int gy)
         freeAndNotCovered(gx + 1, gy) &&
         (blockedOrCovered(gx + 1, gy + 1) || blockedOrCovered(gx + 1, gy - 1));
   }
+  if (northBP) {
+      bp = {gx + 1, gy};
+      return true;
+  }
 
-  return eastBP || westBP || southBP || northBP;
+  return false;
 }
 
 bool Coverage::locateBestBacktrackingPoint(int& goalX, int& goalY, int tileX,
-                                           int tileY)
+                                           int tileY, std::vector<Tile> &bestPath)
 {
   int minDistance = -1;
   for (int gx = 0; gx < m_partition.getWidth(); gx++)
   {
     for (int gy = 0; gy < m_partition.getHeight(); gy++)
     {
-      if (isBacktrackingPoint(gx, gy))
+      Tile bp;
+      if (isBacktrackingPoint(gx, gy, bp))
       {
         double prelimDist = std::pow(gx - tileX, 2) + std::pow(gy - tileY, 2);
         if (prelimDist < minDistance || minDistance < 0)
         {
-          // TODO: change to A*SPT distance
-          int distance =
-              int(aStarSearch(m_partition, {tileX, tileY}, {gx, gy}).size());
+          auto path = aStarSearch(m_partition, {tileX, tileY}, {gx, gy});
+          path.push_back(bp);
+          int distance = int(path.size());
           if (distance < minDistance || minDistance < 0)
           {
             minDistance = distance;
-            goalX = gx;
-            goalY = gy;
+            bestPath = path;
+            goalX = bp.gx;
+            goalY = bp.gy;
           }
         }
       }
@@ -347,7 +375,6 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
 {
   int xOffset = (dir == North ? 1 : -1);
 
-  bool coveredWallFollowing = false;
   // Straight ahead is free?
   if (m_partition.withinGridBounds(gx + xOffset, gy) &&
       m_partition.getStatus(gx + xOffset, gy) == Partition::Free)
@@ -369,7 +396,16 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
     }
 
     // Only covered cells ahead
-    coveredWallFollowing = true;
+    return false;
+  }
+
+  // Straight ahead is unknown? for bug in rolling window
+  if (m_partition.withinGridBounds(gx + xOffset, gy) &&
+      m_partition.getStatus(gx + xOffset, gy) == Partition::Unknown)
+  {
+      // Add goal
+      m_waypoints.push_back({gx + xOffset, gy});
+      return true;
   }
 
   // Straight ahead is blocked => Wall follow if free cells to either side
@@ -421,7 +457,7 @@ endloop:
     ROS_INFO_STREAM("Wall following!");
 
     int nextX = gx + xOffset;
-    for (int y = gy + yOffset; std::abs(y - m_trackY) != m_coverageSize * 2 + 2;
+    for (int y = gy + yOffset; std::abs(y - m_trackY) != m_coverageSize * 2; // 2 cell overlap
          y += yOffset)
     {
       for (int x = nextX; std::abs(x - nextX) <= 2 * m_coverageSize;
@@ -431,8 +467,6 @@ endloop:
         if (m_partition.withinGridBounds(x, y) &&
             m_partition.getStatus(x, y) == Partition::Free)
         {
-          if (coveredWallFollowing && m_partition.isCovered(x, y))
-            break;
           // Add goal
           m_waypoints.push_back({x, y});
           ROS_INFO_STREAM("Wall following goal added: " << x << ", " << y);
