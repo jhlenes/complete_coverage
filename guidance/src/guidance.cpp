@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-#include <otter_control/SpeedCourse.h>
+#include <usv_msgs/SpeedCourse.h>
 
 namespace otter_coverage
 {
@@ -18,7 +18,7 @@ Guidance::Guidance()
       nh.subscribe("simple_dubins_path", 1000, &Guidance::newPath, this);
 
   m_controllerPub =
-      nh.advertise<otter_control::SpeedCourse>("speed_heading", 1000);
+      nh.advertise<usv_msgs::SpeedCourse>("speed_heading", 1000);
 
   tf2_ros::Buffer tfBuffer;
   tf2_ros::TransformListener tfListener(tfBuffer);
@@ -61,9 +61,9 @@ void Guidance::followPath(double x, double y, double psi)
   // Finished?
   if (m_path.poses.size() <= 1)
   {
-    otter_control::SpeedCourse msg;
-    msg.u = 0.0;
-    msg.psi = psi;
+    usv_msgs::SpeedCourse msg;
+    msg.speed = 0.0;
+    msg.course = psi;
     m_controllerPub.publish(msg);
     return;
   }
@@ -135,9 +135,9 @@ void Guidance::followPath(double x, double y, double psi)
     u = 0.6;
 
   // Publish speed and course to controller
-  otter_control::SpeedCourse msg;
-  msg.u = u;
-  msg.psi = chi_d;
+  usv_msgs::SpeedCourse msg;
+  msg.speed = u;
+  msg.course = chi_d;
   m_controllerPub.publish(msg);
 
   ROS_INFO_STREAM("psi_d: " << chi_d << " psi: " << psi);
