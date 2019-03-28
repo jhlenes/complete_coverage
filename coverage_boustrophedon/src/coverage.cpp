@@ -152,8 +152,8 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
           m_waypoints.push_back(*it);
         }
 
-        // TODO: Go further in m_sweepDir. Now only utilizes half of
-        // coverageSize Iterate half coverageSize in each m_sweepDir until
+        // Go further in m_sweepDir. Now only utilizes half of
+        // coverageSize.
         if (m_partition.withinGridBounds(bpX + 1, bpY) &&
             freeAndNotCovered(bpX + 1, bpY))
           m_dir = North;
@@ -167,7 +167,7 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
           m_sweepDir = West;
 
         int yDir = (m_sweepDir == East ? -1 : 1);
-        for (int y = bpY + yDir; std::abs(y - bpY) <= m_coverageSize; y += yDir)
+        for (int y = bpY + yDir; std::abs(y - bpY) <= m_coverageSize - 2; y += yDir)
         {
           if (m_partition.withinGridBounds(bpX, y) &&
               m_partition.getStatus(bpX, y) == Partition::Free)
@@ -415,6 +415,7 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
         if (m_partition.withinGridBounds(x, y) && freeAndNotCovered(x, y))
         {
           // Add goal
+          m_wallFollowing = false;
           m_waypoints.push_back({gx + xOffset, gy});
           return true;
         }
