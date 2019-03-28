@@ -33,27 +33,27 @@ public:
                   double y1, double cellSize, double scanRange);
   void drawPartition(int gx, int gy);
   void update(const nav_msgs::OccupancyGrid& map, double x, double y);
-  void getNeighbors(int gx, int gy, double dist, std::vector<Point>& neighbors);
-  void gridToWorld(int gx, int gy, double& wx, double& wy);
-  void worldToGrid(double wx, double wy, int& gx, int& gy);
-  Status getStatus(int gx, int gy);
+  void getNeighbors(int gx, int gy, double dist, std::vector<Point>& neighbors) const;
+  void gridToWorld(int gx, int gy, double& wx, double& wy) const;
+  void worldToGrid(double wx, double wy, int& gx, int& gy) const;
+  Status getStatus(int gx, int gy) const;
   void setStatus(int gx, int gy, Status status);
-  bool isCovered(int gx, int gy);
+  bool isCovered(int gx, int gy) const;
   void setCovered(int gx, int gy, bool isCovered, int coverageSize = 0);
   int getWidth() const;
   int getHeight() const;
-  bool withinGridBounds(int gx, int gy);
-  bool withinWorldBounds(double wx, double wy);
-  bool hasCompleteCoverage();
-  double dist(double x0, double y0, double x1, double y1)
+  bool withinGridBounds(int gx, int gy) const;
+  bool withinWorldBounds(double wx, double wy) const;
+  bool hasCompleteCoverage() const;
+  double dist(double x0, double y0, double x1, double y1) const
   {
     return std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
   }
 
 private:
-  void gridToLocal(int gx, int gy, double& x, double& y);
-  void localToGrid(double x, double y, int& gx, int& gy);
-  Status calcStatus(const nav_msgs::OccupancyGrid& map, int gx, int gy);
+  void gridToLocal(int gx, int gy, double& x, double& y) const;
+  void localToGrid(double x, double y, int& gx, int& gy) const;
+  Status calcStatus(const nav_msgs::OccupancyGrid& map, int gx, int gy) const;
 
   ros::NodeHandle m_nh;
   ros::Publisher m_pub;

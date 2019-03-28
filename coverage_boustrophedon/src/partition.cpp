@@ -122,7 +122,7 @@ void Partition::update(const nav_msgs::OccupancyGrid& map, double wx, double wy)
 }
 
 void Partition::getNeighbors(int gx, int gy, double distance,
-                             std::vector<Point>& neighbors)
+                             std::vector<Point>& neighbors) const
 {
   int maxGridDist = static_cast<int>(std::ceil(distance / (m_cellSize)));
 
@@ -150,7 +150,7 @@ void Partition::getNeighbors(int gx, int gy, double distance,
   }
 }
 
-void Partition::gridToWorld(int gx, int gy, double& wx, double& wy)
+void Partition::gridToWorld(int gx, int gy, double& wx, double& wy) const
 {
   double lx;
   double ly;
@@ -159,14 +159,14 @@ void Partition::gridToWorld(int gx, int gy, double& wx, double& wy)
   wy = ly + m_y0;
 }
 
-void Partition::worldToGrid(double wx, double wy, int& gx, int& gy)
+void Partition::worldToGrid(double wx, double wy, int& gx, int& gy) const
 {
   double lx = wx - m_x0;
   double ly = wy - m_y0;
   localToGrid(lx, ly, gx, gy);
 }
 
-Partition::Status Partition::getStatus(int gx, int gy)
+Partition::Status Partition::getStatus(int gx, int gy) const
 {
   if (!withinGridBounds(gx, gy))
   {
@@ -188,7 +188,7 @@ void Partition::setStatus(int gx, int gy, Status status)
   m_grid[gx][gy].status = status;
 }
 
-bool Partition::isCovered(int gx, int gy)
+bool Partition::isCovered(int gx, int gy) const
 {
   if (!withinGridBounds(gx, gy))
   {
@@ -212,17 +212,17 @@ int Partition::getHeight() const { return m_height; }
 
 int Partition::getWidth() const { return m_width; }
 
-bool Partition::withinGridBounds(int gx, int gy)
+bool Partition::withinGridBounds(int gx, int gy) const
 {
   return gx >= 0 && gx < m_width && gy >= 0 && gy < m_height;
 }
 
-bool Partition::withinWorldBounds(double wx, double wy)
+bool Partition::withinWorldBounds(double wx, double wy) const
 {
   return wx >= m_x0 && wx <= m_x1 && wy >= m_y0 && wy <= m_y1;
 }
 
-bool Partition::hasCompleteCoverage()
+bool Partition::hasCompleteCoverage() const
 {
   // Any non-covered free cells? => Not finished
   for (auto column : m_grid)
@@ -245,7 +245,7 @@ int mapIndex(int mx, int my, int width)
 }
 
 Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
-                                        int gx, int gy)
+                                        int gx, int gy) const
 {
   /* A cell in the partition contains many cells in the map. All
    * map cells in a partition cell are free => partition cell is free
@@ -303,7 +303,7 @@ Partition::Status Partition::calcStatus(const nav_msgs::OccupancyGrid& map,
   return Free;
 }
 
-void Partition::gridToLocal(int gx, int gy, double& lx, double& ly)
+void Partition::gridToLocal(int gx, int gy, double& lx, double& ly) const
 {
   // if (gx < 0 || gx >= m_width || gy < 0 || gy >= m_height)
   //  ROS_ERROR("gridToLocal: index out of bounds.");
@@ -312,7 +312,7 @@ void Partition::gridToLocal(int gx, int gy, double& lx, double& ly)
   ly = (gy + 0.5) * m_cellSize;
 }
 
-void Partition::localToGrid(double lx, double ly, int& gx, int& gy)
+void Partition::localToGrid(double lx, double ly, int& gx, int& gy) const
 {
   // if (lx < 0 || lx >= m_x1 - m_x0 || ly < 0 || ly >= m_y1 - m_y0)
   //  ROS_ERROR("localToGrid: index out of bounds.");
