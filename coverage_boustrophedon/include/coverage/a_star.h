@@ -117,6 +117,10 @@ static std::vector<Tile> aStarSearch(Partition partition, Tile from, Tile to)
     aStarNeighbor(partition, q, -1, 0, closed, open);
     aStarNeighbor(partition, q, 0, 1, closed, open);
     aStarNeighbor(partition, q, 0, -1, closed, open);
+    aStarNeighbor(partition, q, 1, 1, closed, open);
+    aStarNeighbor(partition, q, -1, 1, closed, open);
+    aStarNeighbor(partition, q, -1, 1, closed, open);
+    aStarNeighbor(partition, q, -1, -1, closed, open);
 
     // Push q to closed
     closed[{q.gx, q.gy}] = q;

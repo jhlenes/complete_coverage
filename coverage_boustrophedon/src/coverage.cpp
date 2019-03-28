@@ -21,7 +21,7 @@ Coverage::Coverage()
   ros::NodeHandle nhP("~");
 
   // Get parameters
-  m_x0 = nhP.param("x0", -51);
+  m_x0 = nhP.param("x0", -10);
   m_y0 = nhP.param("y0", -51);
   m_x1 = nhP.param("x1", 100);
   m_y1 = nhP.param("y1", 50);
@@ -83,7 +83,7 @@ void Coverage::mainLoop(ros::NodeHandle nh)
 
       static int prevGx = gx-1;
       static int prevGy = gy-1;
-      if (gx != prevGx || gy != prevGy)
+      if (m_partition.withinGridBounds(gx, gy) && (gx != prevGx || gy != prevGy))
         m_partition.setCovered(gx, gy, true, m_coverageSize);
 
       if (!m_dirInitialized)
@@ -150,14 +150,31 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
         {
           m_waypoints.push_back(*it);
         }
-        if (freeAndNotCovered(bpX - 1, bpY))
-          m_dir = South;
-        else
-          m_dir = North;
-        m_trackX = bpX;
-        m_trackY = bpY;
+
         // TODO: Go further in m_sweepDir. Now only utilizes half of coverageSize
         // Iterate half coverageSize in each m_sweepDir until
+        if (m_partition.withinGridBounds(bpX + 1, bpY) && freeAndNotCovered(bpX + 1, bpY))
+            m_dir = North;
+        else
+            m_dir = South;
+
+        if (m_partition.withinGridBounds(bpX, bpY - 1) && freeAndNotCovered(bpX, bpY - 1))
+            m_sweepDir = East;
+        else
+            m_sweepDir = West;
+
+        int yDir = (m_sweepDir == East ? -1 : 1);
+        for (int y = bpY + yDir; std::abs(y - bpY) <= m_coverageSize; y += yDir) {
+            if (m_partition.withinGridBounds(bpX, y) && m_partition.getStatus(bpX, y) == Partition::Free) {
+                m_waypoints.push_back({bpX, y});
+            } else {
+                m_trackX = bpX;
+                m_trackY = y - yDir;
+                return;
+            }
+        }
+        m_trackX = m_waypoints.back().gx;
+        m_trackY = m_waypoints.back().gy;
       }
       else
       {
@@ -420,7 +437,7 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
   {
     ROS_INFO_STREAM("Checking if we should do wall following.");
     for (int y = m_trackY + yOffset;
-         std::abs(y - m_trackY) != m_coverageSize * 2; y += yOffset)
+         std::abs(y - m_trackY) <= m_coverageSize * 2; y += yOffset)
     {
       for (int x = gx + xOffset; x != m_trackX; x -= xOffset)
       {
@@ -434,7 +451,7 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
 
     // Check opposite sweep direction
     for (int y = m_trackY + yOffset;
-         std::abs(y - m_trackY) != m_coverageSize * 2; y -= yOffset)
+         std::abs(y - m_trackY) <= m_coverageSize * 2; y -= yOffset)
     {
       for (int x = gx + xOffset; x != m_trackX; x -= xOffset)
       {
