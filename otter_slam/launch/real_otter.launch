@@ -16,6 +16,7 @@
   <!-- Start the GPS -->
   <include file="$(find sensors)/launch/gps.launch" if="$(arg sensors)" />
 
+  <!-- Use android smart phone for IMU and GPS -->
   <!--<node pkg="sensors" type="android_filter_node" name="android_filter_node" />-->
 
   <!-- Generate odom from IMU/GPS -->
@@ -31,9 +32,14 @@
   <!-- Static transform publishers: defines transformations between lidar, IMU, GPS, and base of the Otter.
     Measure the relative positions accurately, as the SLAM algorithm depends on it. -->
   <!-- args: x y z yaw pitch roll parent_frame child_frame period_in_ms -->
-  <node pkg="tf" type="static_transform_publisher" name="base_laser_link" args="0 0 0 0 0 0 base_link lidar_link 100" />
-  <node pkg="tf" type="static_transform_publisher" name="base_imu_link" args="-0.10 0 0 0 0 0 base_link imu_link 100" />
-  <node pkg="tf" type="static_transform_publisher" name="base_gps_link" args="-0.10 0 0 0 0 0 base_link gps_link 100" />
+
+  <!-- Place base_link at IMU location. -->
+  <node pkg="tf" type="static_transform_publisher" name="base_imu_link" args="0 0 0 0 0 0 base_link imu_link 100" />
+  <!-- RPLIDAR is 30 cm above IMU, at same y, and 49 cm forward in x-driection.
+  Rotated r in roll, p in pitch, 3.14 in yaw. -->
+  <node pkg="tf" type="static_transform_publisher" name="base_laser_link" args="-0.49 0 0.30 3.14 0 0 base_link lidar_link 100" />
+  <!-- GPS antenna base is 10 cm directly above IMU -->
+  <node pkg="tf" type="static_transform_publisher" name="base_gps_link" args="0 0 0.10 0 0 0 base_link gps_link 100" />
 
   <!-- Start the Cartographer SLAM node -->
   <node name="cartographer_node" pkg="cartographer_ros"
