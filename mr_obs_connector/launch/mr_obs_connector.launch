@@ -1,6 +1,6 @@
 <launch>
 
-  <arg name="host" default="localhost" />
+  <arg name="host" default="192.168.53.2" />
   <arg name="port" default="10010"     />
 
   <node name="mr_obs_connector" pkg="mr_obs_connector" type="mr_obs_connector.py" output="screen">

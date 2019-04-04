@@ -11,8 +11,8 @@ class mr_obs_connector:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         rospy.Subscriber("speed_course", SpeedCourse, self.handleSpeedCourseMsg)
-        ip = rospy.get_param('host', 'localhost')
-        port = rospy.get_param('port', 10010)
+        ip = rospy.get_param('~host', 'localhost')
+        port = rospy.get_param('~port', 10010)
         self.host = (ip, port)
 
     def handleSpeedCourseMsg(self, msg):
