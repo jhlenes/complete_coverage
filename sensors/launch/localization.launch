@@ -39,12 +39,12 @@
   <node pkg="robot_localization" type="navsat_transform_node"
         name="navsat_transform_node" respawn="true" output="screen">
     <param name="frequency" value="30"/>
-    <param name="magnetic_declination_radians" value="0"/>
+    <param name="magnetic_declination_radians" value="0.0635191637"/>
     <param name="broadcast_utm_transform" value="false"/>
     <param name="wait_for_datum" value="false"/>
     <param name="use_odometry_yaw" value="false"/>
     <rosparam param="datum">[63.439358, 10.399541]</rosparam>
-    <param name="yaw_offset" value="0"/>
+    <param name="yaw_offset" value="1.5707963"/>
     <param name="publish_filtered_gps" value="false"/>
   </node>
 

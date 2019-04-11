@@ -20,7 +20,7 @@
   <!--<node pkg="sensors" type="android_filter_node" name="android_filter_node" />-->
 
   <!-- Generate odom from IMU/GPS -->
-  <include file="$(find sensors)/launch/localization.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/localization.launch" />
 
   <!-- This node remaps 'inf' in laser scans to 'max_range - 0.01', which ensures
   that raytracing of free space can be done in other nodes. -->
@@ -39,7 +39,7 @@
   Rotated r in roll, p in pitch, 3.14 in yaw. -->
   <node pkg="tf" type="static_transform_publisher" name="base_laser_link" args="-0.49 0 0.30 3.14 0 0 base_link lidar_link 100" />
   <!-- GPS antenna base is 10 cm directly above IMU -->
-  <node pkg="tf" type="static_transform_publisher" name="base_gps_link" args="0 0 0.10 0 0 0 base_link gps_link 100" />
+  <node pkg="tf" type="static_transform_publisher" name="base_gps_link" args="0 0 0.10 0 0 0 base_link gps 100" />
 
   <!-- Start the Cartographer SLAM node -->
   <node name="cartographer_node" pkg="cartographer_ros"
@@ -54,7 +54,7 @@
   </node>
 
   <!-- Start connection with OBS -->
-  <include file="$(find mr_obs_connector)/launch/mr_obs_connector.launch" />
+  <!--<include file="$(find mr_obs_connector)/launch/mr_obs_connector.launch" />-->
 
   <!-- Visualize in rviz -->
   <node name="rviz" pkg="rviz" type="rviz" required="true"
