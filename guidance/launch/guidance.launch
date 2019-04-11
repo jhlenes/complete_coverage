@@ -1,7 +1,7 @@
 <launch>
 
   <!-- Start SLAM -->
-  <include file="$(find otter_slam)/launch/otter.launch">
+  <include file="$(find otter_slam)/launch/sim_otter.launch">
     <arg name="rviz" value="false" />
   </include>
 

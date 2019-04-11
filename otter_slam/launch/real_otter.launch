@@ -1,20 +1,20 @@
 <?xml version="1.0" ?>
 <launch>
 
-  <arg name="sensors" default="true" />
-  <arg name="rviz"    default="true" />
+  <arg name="rviz"          default="true" />
+  <arg name="use_bag_file"  default="false" />
 
-  <!-- Make sure not to use simulated time -->
-  <param name="use_sim_time" value="false" />
+  <!-- Make sure not to use simulated time, unless playing from bagfile -->
+  <param name="use_sim_time" value="$(arg use_bag_file)" />
 
   <!-- Start the RPLIDAR -->
-  <include file="$(find sensors)/launch/lidar.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/lidar.launch" unless="$(arg use_bag_file)" />
 
   <!-- Start the Xsens IMU -->
-  <include file="$(find sensors)/launch/imu.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/imu.launch"   unless="$(arg use_bag_file)" />
 
   <!-- Start the GPS -->
-  <include file="$(find sensors)/launch/gps.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/gps.launch"   unless="$(arg use_bag_file)" />
 
   <!-- Use android smart phone for IMU and GPS -->
   <!--<node pkg="sensors" type="android_filter_node" name="android_filter_node" />-->
@@ -44,7 +44,7 @@
   <!-- Start the Cartographer SLAM node -->
   <node name="cartographer_node" pkg="cartographer_ros"
         type="cartographer_node" args="
-        -configuration_directory $(find otter_slam)/config_usv
+        -configuration_directory $(find otter_slam)/config
         -configuration_basename real_otter.lua"
         output="screen">
     <remap from="imu" to="imu/data" />
