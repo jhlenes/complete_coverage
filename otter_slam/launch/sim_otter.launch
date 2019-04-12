@@ -3,11 +3,14 @@
 
   <arg name="rviz" default="true" />
 
+  <!-- EKF for fusing IMU and GPS data into odometry -->
+  <include file="$(find otter_gazebo)/launch/localization.launch" />
+
   <!-- Start the cartographer node. This node does SLAM. -->
   <node name="cartographer_node" pkg="cartographer_ros"
         type="cartographer_node" args="
-        -configuration_directory $(find otter_slam)/config_usv
-        -configuration_basename otter.lua"
+        -configuration_directory $(find otter_slam)/config
+        -configuration_basename sim_otter.lua"
         output="screen">
         <remap from="scan" to="filtered_scan" />
         <remap from="imu" to="imu/data" />

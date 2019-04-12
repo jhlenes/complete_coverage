@@ -11,10 +11,10 @@
     <param name="frame_id"         type="string" value="lidar_link" />
     <param name="inverted"         type="bool"   value="false"        />
     <param name="angle_compensate" type="bool"   value="true"         />
-    <param name="scan_mode"        type="string" value="Sensitivity"  />
+    <param name="scan_mode"        type="string" value="Stability"  />
     <!-- Scan modes: Standard, Express, Boost, Sensitivity, Stability.
-    All of them are undocumented, just use Sensitivity (which is standard
-    in examples provided by Slamtec). -->
+    All of them are undocumented. -->
+    <!-- Stability confirmed to be working better outdoors! -->
     <remap from="scan" to="lidar/scan" />
   </node>
 

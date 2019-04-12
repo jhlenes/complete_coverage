@@ -31,13 +31,15 @@ struct Node
 
 /* Implementations */
 
-static void aStarNeighbor(Partition partition, Node q, int dx, int dy,
-                          std::map<std::pair<int, int>, Node> closed,
+static void aStarNeighbor(const Partition& partition, const Node& q, int dx,
+                          int dy,
+                          const std::map<std::pair<int, int>, Node>& closed,
                           std::map<std::pair<int, int>, Node>& open)
 {
   int ngx = q.gx + dx;
   int ngy = q.gy + dy;
-  if (partition.withinGridBounds(ngx, ngy) && partition.isCovered(ngx, ngy))
+  if (partition.withinGridBounds(ngx, ngy) && partition.isCovered(ngx, ngy) &&
+      partition.getStatus(ngx, ngy) == Partition::Free)
   {
     Node node(ngx, ngy, q.gx, q.gy);
     node.g = q.g + 1;
@@ -68,7 +70,8 @@ static void aStarNeighbor(Partition partition, Node q, int dx, int dy,
   }
 }
 
-static std::vector<Tile> aStarSearch(Partition partition, Tile from, Tile to)
+static std::vector<Tile> aStarSearch(const Partition& partition,
+                                     const Tile& from, const Tile& to)
 {
 
   std::map<std::pair<int, int>, Node> open;
@@ -117,6 +120,10 @@ static std::vector<Tile> aStarSearch(Partition partition, Tile from, Tile to)
     aStarNeighbor(partition, q, -1, 0, closed, open);
     aStarNeighbor(partition, q, 0, 1, closed, open);
     aStarNeighbor(partition, q, 0, -1, closed, open);
+    aStarNeighbor(partition, q, 1, 1, closed, open);
+    aStarNeighbor(partition, q, -1, 1, closed, open);
+    aStarNeighbor(partition, q, -1, 1, closed, open);
+    aStarNeighbor(partition, q, -1, -1, closed, open);
 
     // Push q to closed
     closed[{q.gx, q.gy}] = q;
@@ -125,7 +132,7 @@ static std::vector<Tile> aStarSearch(Partition partition, Tile from, Tile to)
   return std::vector<Tile>(); // No path found
 }
 
-static bool lineOfSight(Partition partition, Tile from, Tile to)
+static bool lineOfSight(const Partition& partition, Tile from, Tile to)
 { // Algorithm: http://eugen.dedu.free.fr/projects/bresenham/
   int x1 = from.gx;
   int y1 = from.gy;
@@ -258,7 +265,7 @@ static bool lineOfSight(Partition partition, Tile from, Tile to)
   return true;
 }
 
-static std::vector<Tile> aStarSPT(Partition partition, Tile from, Tile to)
+static std::vector<Tile> aStarSPT(const Partition& partition, Tile from, Tile to)
 {
   auto aStarPath = aStarSearch(partition, from, to);
   if (aStarPath.size() <= 2)

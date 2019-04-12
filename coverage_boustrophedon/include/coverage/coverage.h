@@ -48,18 +48,17 @@ private:
 
   void mapCallback(const nav_msgs::OccupancyGrid& m_grid);
   void mainLoop(ros::NodeHandle nh);
-  bool updatePose(const tf2_ros::Buffer& tfBuffer);
+  bool updatePose();
   void boustrophedonCoverage(int gx, int gy, Goal goal);
   Goal updateWPs(int gx, int gy);
   bool checkDirection(Direction dir, int gx, int gy);
   bool isFree(int gx, int gy, bool allowUnknown);
-  bool locateBestBacktrackingPoint(int& goalX, int& goalY, int gx, int gy);
+  bool locateBestBacktrackingPoint(int& goalX, int& goalY, int gx, int gy, std::vector<Tile> &bestPath);
   bool blockedOrCovered(int gx, int gy);
   bool freeAndNotCovered(int gx, int gy);
-  bool isBacktrackingPoint(int gx, int gy);
+  bool isBacktrackingPoint(int gx, int gy, Tile &bp);
   void publishGoal(int gx, int gy, Goal goal);
-
-  bool m_mapInitialized;
+  void newTrack(int gx, int gy);
 
   // ROS parameters
   double m_x0;
@@ -70,6 +69,17 @@ private:
   double m_tileResolution;
   double m_goalTolerance;
 
+  bool m_mapInitialized;
+  bool m_dirInitialized = false;
+
+  Direction m_dir = North;
+  Direction m_sweepDir = East;
+
+  int m_trackX = 0;
+  int m_trackY = 0;
+
+  bool m_wallFollowing = false;
+
   ros::Publisher m_goalPub;
   ros::Publisher m_pathPub;
   ros::Publisher m_dubinPub;
@@ -79,8 +89,13 @@ private:
   std::deque<Tile> m_waypoints;
 
   Partition m_partition;
+
   Pose m_pose;
+
   bool m_finished = false;
+
+  int m_coverageSize = 5;
+  int m_minCoverageSize = -1;
 };
 
 } // namespace otter_coverage

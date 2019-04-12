@@ -1,25 +1,26 @@
 <?xml version="1.0" ?>
 <launch>
 
-  <arg name="sensors" default="true" />
-  <arg name="rviz"    default="true" />
+  <arg name="rviz"          default="true" />
+  <arg name="use_bag_file"  default="false" />
 
-  <!-- Make sure not to use simulated time -->
-  <param name="use_sim_time" value="false" />
+  <!-- Make sure not to use simulated time, unless playing from bagfile -->
+  <param name="use_sim_time" value="$(arg use_bag_file)" />
 
   <!-- Start the RPLIDAR -->
-  <include file="$(find sensors)/launch/lidar.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/lidar.launch" unless="$(arg use_bag_file)" />
 
   <!-- Start the Xsens IMU -->
-  <include file="$(find sensors)/launch/imu.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/imu.launch"   unless="$(arg use_bag_file)" />
 
   <!-- Start the GPS -->
-  <include file="$(find sensors)/launch/gps.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/gps.launch"   unless="$(arg use_bag_file)" />
 
+  <!-- Use android smart phone for IMU and GPS -->
   <!--<node pkg="sensors" type="android_filter_node" name="android_filter_node" />-->
 
   <!-- Generate odom from IMU/GPS -->
-  <include file="$(find sensors)/launch/localization.launch" if="$(arg sensors)" />
+  <include file="$(find sensors)/launch/localization.launch" />
 
   <!-- This node remaps 'inf' in laser scans to 'max_range - 0.01', which ensures
   that raytracing of free space can be done in other nodes. -->
@@ -31,14 +32,19 @@
   <!-- Static transform publishers: defines transformations between lidar, IMU, GPS, and base of the Otter.
     Measure the relative positions accurately, as the SLAM algorithm depends on it. -->
   <!-- args: x y z yaw pitch roll parent_frame child_frame period_in_ms -->
-  <node pkg="tf" type="static_transform_publisher" name="base_laser_link" args="0 0 0 0 0 0 base_link lidar_link 100" />
-  <node pkg="tf" type="static_transform_publisher" name="base_imu_link" args="-0.10 0 0 0 0 0 base_link imu_link 100" />
-  <node pkg="tf" type="static_transform_publisher" name="base_gps_link" args="-0.10 0 0 0 0 0 base_link gps_link 100" />
+
+  <!-- Place base_link at IMU location. -->
+  <node pkg="tf" type="static_transform_publisher" name="base_imu_link" args="0 0 0 0 0 0 base_link imu_link 100" />
+  <!-- RPLIDAR is 30 cm above IMU, at same y, and 49 cm forward in x-driection.
+  Rotated r in roll, p in pitch, 3.14 in yaw. -->
+  <node pkg="tf" type="static_transform_publisher" name="base_laser_link" args="-0.49 0 0.30 3.14 0 0 base_link lidar_link 100" />
+  <!-- GPS antenna base is 10 cm directly above IMU -->
+  <node pkg="tf" type="static_transform_publisher" name="base_gps_link" args="0 0 0.10 0 0 0 base_link gps 100" />
 
   <!-- Start the Cartographer SLAM node -->
   <node name="cartographer_node" pkg="cartographer_ros"
         type="cartographer_node" args="
-        -configuration_directory $(find otter_slam)/config_usv
+        -configuration_directory $(find otter_slam)/config
         -configuration_basename real_otter.lua"
         output="screen">
     <remap from="imu" to="imu/data" />
@@ -46,6 +52,9 @@
     <remap from="odom" to="odom" />
     <!--<remap from="fix" to="gps/fix" />--> <!-- Not implemented for 2D -->
   </node>
+
+  <!-- Start connection with OBS -->
+  <!--<include file="$(find mr_obs_connector)/launch/mr_obs_connector.launch" />-->
 
   <!-- Visualize in rviz -->
   <node name="rviz" pkg="rviz" type="rviz" required="true"

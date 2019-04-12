@@ -1,0 +1,26 @@
+<launch>
+
+  <arg name="rviz"    default="false" />
+  <arg name="sensors" default="true" />
+
+  <!-- Start SLAM -->
+  <include file="$(find otter_slam)/launch/real_otter.launch">
+    <arg name="rviz"    value="false"          />
+    <arg name="sensors" value="$(arg sensors)" />
+  </include>
+
+  <!-- Map inflating -->
+  <include file="$(find map_inflating)/launch/map_inflating.launch">
+    <arg name="inflating_radius"  value="3.0" />
+    <arg name="laser_filter"      value="false" />
+  </include>
+
+  <!-- Guidance node -->
+  <node name="guidance_node" pkg="guidance" type="guidance_node" output="screen">
+  </node>
+
+  <!-- Visualize in rviz -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+        args="-d $(find coverage_boustrophedon)/config/coverage.rviz" if="$(arg rviz)" />
+
+</launch>
