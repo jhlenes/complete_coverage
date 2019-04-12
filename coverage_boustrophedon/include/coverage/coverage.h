@@ -58,17 +58,7 @@ private:
   bool freeAndNotCovered(int gx, int gy);
   bool isBacktrackingPoint(int gx, int gy, Tile &bp);
   void publishGoal(int gx, int gy, Goal goal);
-
-  bool m_mapInitialized;
-
-  std::vector<Direction> m_priorities = {North, South, East, West};
-
-  bool m_dirInitialized = false;
-  Direction m_dir = North;
-  Direction m_sweepDir = East;
-  int m_trackX = 0;
-  int m_trackY = 0;
-  bool m_wallFollowing = false;
+  void newTrack(int gx, int gy);
 
   // ROS parameters
   double m_x0;
@@ -78,6 +68,17 @@ private:
   double m_scanRange;
   double m_tileResolution;
   double m_goalTolerance;
+
+  bool m_mapInitialized;
+  bool m_dirInitialized = false;
+
+  Direction m_dir = North;
+  Direction m_sweepDir = East;
+
+  int m_trackX = 0;
+  int m_trackY = 0;
+
+  bool m_wallFollowing = false;
 
   ros::Publisher m_goalPub;
   ros::Publisher m_pathPub;
@@ -93,7 +94,8 @@ private:
 
   bool m_finished = false;
 
-  int m_coverageSize;
+  int m_coverageSize = 5;
+  int m_minCoverageSize = -1;
 };
 
 } // namespace otter_coverage

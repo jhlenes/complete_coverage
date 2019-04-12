@@ -23,7 +23,7 @@ Coverage::Coverage()
   // Get parameters
   m_x0 = nhP.param("x0", -10);
   m_y0 = nhP.param("y0", -51);
-  m_x1 = nhP.param("x1", 100);
+  m_x1 = nhP.param("x1", 40);
   m_y1 = nhP.param("y1", 50);
   m_tileResolution = nhP.param("tile_resolution", 5.0);
   m_scanRange = nhP.param("scan_range", 24.5);
@@ -31,9 +31,6 @@ Coverage::Coverage()
 
   // Set up partition
   m_partition.initialize(nh, m_x0, m_y0, m_x1, m_y1, m_tileResolution, m_scanRange);
-
-  // TODO: this should be set based on the depth
-  m_coverageSize = 5;
 
   // Set up subscribers
   ros::Subscriber sub = nh.subscribe("inflated_map", 1000, &Coverage::mapCallback, this);
@@ -71,6 +68,12 @@ void Coverage::mainLoop(ros::NodeHandle nh)
       int gx, gy;
       m_partition.worldToGrid(m_pose.x, m_pose.y, gx, gy);
 
+      // TODO: Get coverage size from depth
+      m_coverageSize = 5; // gy / (m_y1 - m_y0) * 7 + 1;
+      if (m_coverageSize < m_minCoverageSize || m_minCoverageSize < 0) {
+        m_minCoverageSize = m_coverageSize;
+      }
+
       Goal goal = updateWPs(gx, gy);
 
       boustrophedonCoverage(gx, gy, goal);
@@ -83,8 +86,7 @@ void Coverage::mainLoop(ros::NodeHandle nh)
       if (!m_dirInitialized)
       {
         m_dirInitialized = true;
-        m_trackX = gx;
-        m_trackY = gy;
+        newTrack(gx, gy);
       }
 
       prevGx = gx;
@@ -164,13 +166,11 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
           }
           else
           {
-            m_trackX = bpX;
-            m_trackY = y - yDir;
+            newTrack(bpX, y - yDir);
             return;
           }
         }
-        m_trackX = m_waypoints.back().gx;
-        m_trackY = m_waypoints.back().gy;
+        newTrack(m_waypoints.back().gx, m_waypoints.back().gy);
       }
       else
       {
@@ -419,8 +419,11 @@ bool Coverage::checkDirection(Direction dir, int gx, int gy)
   ROS_INFO_STREAM("Current track: x=" << m_trackX << ", y=" << m_trackY);
 
   // Check if free cells in sweep direction
+  static int wallFollowDist = 0;
   if (!m_wallFollowing)
   {
+    wallFollowDist = m_minCoverageSize;
+
     // Check if there are target cells adjacent to current track in sweep direction
     ROS_INFO_STREAM("Checking whether or not to wall follow...");
     for (int y = m_trackY + yOffset; std::abs(y - m_trackY) <= m_coverageSize * 2; y += yOffset)
@@ -459,7 +462,7 @@ endCheckWallFollow:
   {
     // Wall follow in sweep direction at maximum 2*m_coverageSize cells
     int nextX = gx + xOffset;
-    for (int y = gy + yOffset; std::abs(y - m_trackY) != m_coverageSize * 2; /* 2 cell overlap */ y += yOffset)
+    for (int y = gy + yOffset; std::abs(y - m_trackY) != wallFollowDist * 2; /* 2 cell overlap */ y += yOffset)
     {
       for (int x = nextX; std::abs(x - nextX) <= 2 * m_coverageSize; x -= xOffset)
       {
@@ -476,8 +479,7 @@ endCheckWallFollow:
 
     // We are finished wall following, switch direction and start new track
     m_dir = (m_dir == North ? South : North);
-    m_trackX = gx;
-    m_trackY = gy;
+    newTrack(gx, gy);
     ROS_INFO_STREAM("Switching direction to " << (m_dir == North ? "North" : "South"));
     m_wallFollowing = false;
     return true;
@@ -539,6 +541,12 @@ void Coverage::publishGoal(int gx, int gy, Goal goal)
   di.start = startPose;
   di.end = goalPose;
   m_dubinPub.publish(di);
+}
+
+void Coverage::newTrack(int gx, int gy) {
+  m_trackX = gx;
+  m_trackY = gy;
+  m_minCoverageSize = -1;
 }
 
 } // namespace otter_coverage
