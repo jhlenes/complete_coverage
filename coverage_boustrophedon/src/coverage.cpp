@@ -207,6 +207,7 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
     {
       ROS_INFO("Current waypoint is blocked. Searching for new... ");
       goal.reached = true;
+      m_waypoints.clear(); // clear waypoints
     }
   }
 
