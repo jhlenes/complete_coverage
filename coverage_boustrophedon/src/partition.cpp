@@ -1,6 +1,7 @@
 #include <cmath>
 #include <coverage/partition.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <coverage/a_star.h>
 
 namespace otter_coverage
 {
@@ -199,12 +200,23 @@ bool Partition::isCovered(int gx, int gy) const
   return m_grid[gx][gy].isCovered;
 }
 
-void Partition::setCovered(int gx, int gy, bool isCovered, int coverageSize)
+void Partition::setCovered(int gx, int gy, bool isCovered, int coverageSize, double psi)
 {
-  for (int j = std::max(gy - coverageSize, 0);
-       j < std::min(gy + coverageSize + 1, getHeight()); j++)
-  {
-    m_grid[gx][j].isCovered = isCovered;
+  
+  if (coverageSize == 0 || std::abs(psi) < std::numeric_limits<double>::epsilon()) {
+    int i = std::min(std::max(gx, 0), getWidth() - 1);
+    for (int j = std::max(gy - coverageSize, 0); j < std::min(gy + coverageSize + 1, getHeight()); j++)
+    {
+      m_grid[i][j].isCovered = isCovered;
+    }
+    return;
+  }
+  
+  psi = psi + M_PI_2; // perpendicular to moving direction
+  if (isCovered) {
+    Tile from = {std::min(gx + int(std::ceil(coverageSize * std::cos(psi))), getWidth() - 1), std::min(gy + int(std::ceil(coverageSize * std::sin(psi))), getHeight() - 1)};
+    Tile to = {std::max(gx - int(std::ceil(coverageSize * std::cos(psi))), 0), std::max(gy - int(std::ceil(coverageSize * std::sin(psi))), 0)};
+    losCover(*this, from, to);
   }
 }
 

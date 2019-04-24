@@ -78,19 +78,13 @@ void Coverage::mainLoop(ros::NodeHandle nh)
 
       boustrophedonCoverage(gx, gy, goal);
 
-      static int prevGx = gx - 1;
-      static int prevGy = gy - 1;
-      if (m_partition.withinGridBounds(gx, gy) && (gx != prevGx || gy != prevGy))
-        m_partition.setCovered(gx, gy, true, m_coverageSize);
+      m_partition.setCovered(gx, gy, true, m_coverageSize, m_pose.psi);
 
       if (!m_dirInitialized)
       {
         m_dirInitialized = true;
         newTrack(gx, gy);
       }
-
-      prevGx = gx;
-      prevGy = gy;
 
       // ROS_INFO_STREAM("Current pos: " << gx << ", " << gy);
       // ROS_INFO_STREAM("Current goal: " << goal.gx << ", " << goal.gy);
