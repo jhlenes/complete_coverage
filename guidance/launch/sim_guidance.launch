@@ -20,4 +20,9 @@
 
   <node name="OtterController" pkg="otter_control" type="controller" />
 
+  <!-- Start connection with OBS -->
+  <include file="$(find mr_obs_connector)/launch/mr_obs_connector.launch">
+    <arg name="host" value="localhost" />
+  </include>
+
 </launch>

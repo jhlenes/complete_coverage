@@ -53,9 +53,6 @@
     <!--<remap from="fix" to="gps/fix" />--> <!-- Not implemented for 2D -->
   </node>
 
-  <!-- Start connection with OBS -->
-  <!--<include file="$(find mr_obs_connector)/launch/mr_obs_connector.launch" />-->
-
   <!-- Visualize in rviz -->
   <node name="rviz" pkg="rviz" type="rviz" required="true"
         args="-d $(find otter_slam)/config/slam.rviz" if="$(arg rviz)" />

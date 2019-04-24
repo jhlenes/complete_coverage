@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 import os
 import socket
+
 import rospy
+
 import mr_ros_pb2
 from usv_msgs.msg import SpeedCourse
-from geometry_msgs.msg import QuaternionStamped
+from sensor_msgs.msg import Imu
 from tf.transformations import euler_from_quaternion
-
+import tf
+from math import fmod, pi
 
 class mr_obs_connector:
 
@@ -17,38 +20,48 @@ class mr_obs_connector:
         port = rospy.get_param('~port', 10010)
         self.host = (ip, port)
 
-        self.course_diff_set = False
-        self.course_diff = 0
+        self.true_heading = 0
 
-        rospy.Subscriber("speed_course", SpeedCourse, self.handleSpeedCourseMsg)
-        rospy.Subscriber("gps/heading", QuaternionStamped, self.handleQuaternion)
+        self.tf_listener = tf.TransformListener()
+
+        rospy.Subscriber('speed_course', SpeedCourse, self.handleSpeedCourseMsg)
+        rospy.Subscriber('imu/data', Imu, self.handleImuMsg)
 
 
     def handleSpeedCourseMsg(self, msg):
+        
+        # Get heading from TF
+        try:
+            (trans,rot) = self.tf_listener.lookupTransform('map', 'base_link', rospy.Time(0))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            print('No transform from map to base_link. Assuming they are the same...')
+            rot = [0, 0, 0, 1]
+        q = rot # rotation in quaternions
+        euler_angles = euler_from_quaternion([q[0], q[1], q[2], q[3]])
+        map_heading = euler_angles[2]
+
+        # Get desired map heading
+        desired_map_heading = msg.course
+
+        # Get desired true heading
+        desired_true_heading = desired_map_heading - map_heading + self.true_heading
+        desired_true_heading = fmod(fmod(desired_true_heading, 2.0*pi) + 2.0*pi, 2.0*pi) # wrap to [0, 2*pi]
+
+        # Send true heading to OBS
         mr_pb_msg = mr_ros_pb2.SpeedCourse()
         mr_pb_msg.speed = msg.speed
-        mr_pb_msg.course = msg.course + self.course_diff
+        mr_pb_msg.course = 2*pi - desired_true_heading # Z-axis down in OBS and up in ROS
 
-        print("Sending SpeedCourse message: %s" % mr_pb_msg)
+        print('Sending SpeedCourse message: %s' % mr_pb_msg)
 
         string = mr_pb_msg.SerializeToString()
-        self.sock.sendto(string, self.host)
+        self.sock.sendto(string, self.host)   
 
+    def handleImuMsg(self, msg):
+        q = msg.orientation
+        euler_angles = euler_from_quaternion([q.x, q.y, q.z, q.w])
+        self.true_heading = euler_angles[2]
 
-    def handleQuaternion(self, msg):
-        # ROS has its own coordinate frame which does not necessarilly have true north as 0 heading.
-        # We want to output true course, thus we store the offset as the first received true heading.
-        # Note: this node must be started at the same time as the SLAM node
-        if not self.course_diff_set:
-            self.course_diff_set = True
-            
-            q = msg.quaternion
-            euler_angles = euler_from_quaternion([q.x, q.y, q.z, q.w])
-            course = euler_angles[2]
-            self.course_diff = course
-
-            print("True starting course is: %s" % course)
-            
 
 
 if __name__ == '__main__':

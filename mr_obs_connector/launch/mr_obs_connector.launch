@@ -6,6 +6,7 @@
   <node name="mr_obs_connector" pkg="mr_obs_connector" type="mr_obs_connector.py" output="screen">
     <param name="host" value="$(arg host)" />
     <param name="port" value="$(arg port)" />
+    <remap from="speed_course" to="speed_heading" />
   </node>
 
 </launch>

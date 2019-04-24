@@ -11,4 +11,5 @@
 
   <depend>rospy</depend>
   <depend>usv_msgs</depend>
+  <depend>sensor_msgs</depend>
 </package>
