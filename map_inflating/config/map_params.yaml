@@ -28,7 +28,7 @@ mark_threshold: 0
 transform_tolerance: 0.3
 obstacle_range: 24.95
 max_obstacle_height: 2.0
-raytrace_range: 25 # The laser_filter node converts inf to 24.99, raytrace_range must be smaller than that.
+raytrace_range: 25
 #footprint: [[-1.000, -1.000], [-1.000, 1.000], [1.000, 1.000], [1.35, 0.0], [1.000, -1.000]]
 robot_radius: 1.97
 footprint_padding: 0.01
@@ -40,4 +40,6 @@ lethal_cost_threshold: 100
 #base_scan: {data_type: LaserScan, expected_update_rate: 0.4,
 #observation_persistence: 0.0, marking: true, clearing: true, max_obstacle_height: 0.4, min_obstacle_height: 0.08}
 observation_sources: laser_scan_sensor
-laser_scan_sensor: {sensor_frame: lidar_link, data_type: LaserScan, topic: filtered_scan, marking: true, clearing: true}
+laser_scan_sensor: {sensor_frame: lidar_link, data_type: LaserScan, topic: lidar/scan, observation_persistence: 0.0, marking: true, clearing: true, max_obstacle_height: 2.0, min_obstacle_height: 0.0, inf_is_valid: true}
+
+combination_method: 0 # overwrite earlier costmap

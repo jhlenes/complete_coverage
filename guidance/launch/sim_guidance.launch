@@ -18,11 +18,12 @@
   <node name="rviz" pkg="rviz" type="rviz" required="true"
     args="-d $(find coverage_boustrophedon)/config/coverage.rviz" />
 
+  <!-- Start controllers for simulated Otter USV -->
   <node name="OtterController" pkg="otter_control" type="controller" />
 
   <!-- Start connection with OBS -->
-  <include file="$(find mr_obs_connector)/launch/mr_obs_connector.launch">
+  <!--<include file="$(find mr_obs_connector)/launch/mr_obs_connector.launch" output="">
     <arg name="host" value="localhost" />
-  </include>
+  </include>-->
 
 </launch>
