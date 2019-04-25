@@ -79,6 +79,8 @@ private:
   int m_trackY = 0;
 
   bool m_wallFollowing = false;
+  bool m_backtracking = false;
+  bool m_finished = false;
 
   ros::Publisher m_goalPub;
   ros::Publisher m_pathPub;
@@ -91,8 +93,6 @@ private:
   Partition m_partition;
 
   Pose m_pose;
-
-  bool m_finished = false;
 
   int m_coverageSize = 5;
   int m_minCoverageSize = -1;

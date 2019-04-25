@@ -122,7 +122,7 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
 {
   if (goal.reached)
   {
-    if (checkDirection(m_dir, goal.gx, goal.gy))
+    if (checkDirection(m_dir, goal.gx, goal.gy) && !m_backtracking)
     {
       ROS_INFO_STREAM("Moving to new cell...");
     }
@@ -135,6 +135,7 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       if (locateBestBacktrackingPoint(bpX, bpY, gx, gy, path))
       {
         ROS_INFO("Backtracking...");
+        m_backtracking = true;
         for (auto it = path.begin() + 1; it != path.end(); it++)
         {
           m_waypoints.push_back(*it);
@@ -208,6 +209,12 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
       ROS_INFO("Current waypoint is blocked. Searching for new... ");
       goal.reached = true;
       m_waypoints.clear(); // clear waypoints
+
+      if (m_backtracking || m_finished)
+        newTrack(gx, gy);
+
+      if (m_finished)
+        m_finished = false;
     }
   }
 
@@ -217,6 +224,10 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
     goal = Goal(m_waypoints.front());
     m_waypoints.pop_front();
     goalPublished = false;
+
+    if (m_waypoints.empty() && m_backtracking) {
+      m_backtracking = false;
+    }
   }
 
   // Publish waypoint
@@ -227,35 +238,29 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
   }
 
   // Finished
-  static bool finished = false;
   // TODO: Figure out how not to be "finished" when in starting position
   if ((gx != startX || gy != startY) && goal.reached && m_waypoints.empty() &&
-      m_partition.hasCompleteCoverage() && !finished)
+      m_partition.hasCompleteCoverage() && !m_finished)
   {
     ROS_INFO("Finished!");
-    finished = true;
+    m_finished = true;
     m_wallFollowing = false;
-    static bool goingToStart = false;
 
     // Go to start
-    if (!goingToStart)
+    ROS_INFO("Going to start!");
+    auto path = aStarSearch(m_partition, {gx, gy}, {startX, startY});
+    for (auto it = path.begin() + 1; it != path.end(); it++)
     {
-      ROS_INFO("Going to start!");
-      auto path = aStarSearch(m_partition, {gx, gy}, {startX, startY});
-      for (auto it = path.begin() + 1; it != path.end(); it++)
-      {
-        m_waypoints.push_back(*it);
-      }
-      goal = Goal(m_waypoints.front());
-      m_waypoints.pop_front();
-      goalPublished = false;
-      goingToStart = true;
+      m_waypoints.push_back(*it);
     }
+    goal = Goal(m_waypoints.front());
+    m_waypoints.pop_front();
+    goalPublished = false;    
   }
 
-  if (finished && !m_partition.hasCompleteCoverage())
+  if (m_finished && !m_partition.hasCompleteCoverage())
   {
-    finished = false;
+    m_finished = false;
   }
 
   return goal;
