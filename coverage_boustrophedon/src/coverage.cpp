@@ -25,9 +25,10 @@ Coverage::Coverage()
   m_y0 = nhP.param("y0", -51);
   m_x1 = nhP.param("x1", 40);
   m_y1 = nhP.param("y1", 50);
-  m_tileResolution = nhP.param("tile_resolution", 5.0);
-  m_scanRange = nhP.param("scan_range", 24.5);
+  m_tileResolution = nhP.param("tile_resolution", 1.0);
+  m_scanRange = nhP.param("scan_range", 20.0);
   m_goalTolerance = nhP.param("goal_tolerance", 1.0);
+  m_coverageSize = nhP.param("coverage_size", 5);
 
   // Set up partition
   m_partition.initialize(nh, m_x0, m_y0, m_x1, m_y1, m_tileResolution, m_scanRange);
@@ -69,7 +70,7 @@ void Coverage::mainLoop(ros::NodeHandle nh)
       m_partition.worldToGrid(m_pose.x, m_pose.y, gx, gy);
 
       // TODO: Get coverage size from depth
-      m_coverageSize = 5; // gy / (m_y1 - m_y0) * 7 + 1;
+      // m_coverageSize = gy / (m_y1 - m_y0) * 7 + 1;
       if (m_coverageSize < m_minCoverageSize || m_minCoverageSize < 0) {
         m_minCoverageSize = m_coverageSize;
       }

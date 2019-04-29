@@ -8,13 +8,10 @@ namespace otter_coverage
 
 Partition::Partition() : m_initialized(false) {}
 
-void Partition::initialize(ros::NodeHandle nh, double x0, double y0, double x1,
-                           double y1, double cellSize, double scanRange)
+void Partition::initialize(ros::NodeHandle nh, double x0, double y0, double x1, double y1, double cellSize, double scanRange)
 {
   // TODO: rotate coordinate system? so that rectangle doesn't need to be
   // aligned with x and y axis in map frame.
-
-  cellSize = 1.0; // TODO: remove
 
   m_initialized = true;
 
@@ -32,8 +29,7 @@ void Partition::initialize(ros::NodeHandle nh, double x0, double y0, double x1,
   m_height = static_cast<int>(std::ceil((y1 - y0) / cellSize));
 
   // Initialize cells
-  std::vector<std::vector<Cell>> grid(m_width,
-                                      std::vector<Cell>(m_height, Cell()));
+  std::vector<std::vector<Cell>> grid(m_width, std::vector<Cell>(m_height, Cell()));
   m_grid = grid;
 }
 

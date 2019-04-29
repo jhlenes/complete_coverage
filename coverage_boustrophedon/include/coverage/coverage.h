@@ -94,7 +94,7 @@ private:
 
   Pose m_pose;
 
-  int m_coverageSize = 5;
+  int m_coverageSize;
   int m_minCoverageSize = -1;
 };
 
