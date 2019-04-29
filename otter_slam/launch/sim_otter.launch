@@ -12,8 +12,8 @@
         -configuration_directory $(find otter_slam)/config
         -configuration_basename sim_otter.lua"
         output="screen">
-        <remap from="scan" to="filtered_scan" />
-        <remap from="imu" to="imu/data" />
+        <remap from="scan" to="lidar/scan" />
+        <remap from="imu"  to="imu/data" />
         <remap from="odom" to="odom" />
   </node>
 

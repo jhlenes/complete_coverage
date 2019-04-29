@@ -1,12 +1,12 @@
 <launch>
 
-  <arg name="rviz"    default="false" />
-  <arg name="sensors" default="true" />
+  <arg name="rviz"          default="false" />
+  <arg name="use_bag_file"  default="false" />
 
   <!-- Start SLAM -->
   <include file="$(find otter_slam)/launch/real_otter.launch">
-    <arg name="rviz"    value="false"          />
-    <arg name="sensors" value="$(arg sensors)" />
+    <arg name="rviz"          value="false" />
+    <arg name="use_bag_file"  value="$(arg use_bag_file)" />
   </include>
 
   <!-- Map inflating -->

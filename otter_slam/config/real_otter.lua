@@ -46,8 +46,8 @@ TRAJECTORY_BUILDER_2D.submaps.num_range_data = 25
 
 POSE_GRAPH.optimize_every_n_nodes = 15
 
-POSE_GRAPH.optimization_problem.local_slam_pose_translation_weight = 1e5
-POSE_GRAPH.optimization_problem.local_slam_pose_rotation_weight = 1e5
+POSE_GRAPH.optimization_problem.local_slam_pose_translation_weight = 1e6
+POSE_GRAPH.optimization_problem.local_slam_pose_rotation_weight = 1e4
 POSE_GRAPH.optimization_problem.odometry_translation_weight = 1e4
 POSE_GRAPH.optimization_problem.odometry_rotation_weight = 1e7
 
