@@ -52,6 +52,9 @@ class mr_obs_connector:
         mr_pb_msg.speed = msg.speed
         mr_pb_msg.course = 2*pi - desired_true_heading # Z-axis down in OBS and up in ROS
 
+        # Magnetic declination: Trondheim harbor
+        mr_pb_msg.course = 2*pi - desired_true_heading - 0.0635191637
+
         print('Sending SpeedCourse message: %s' % mr_pb_msg)
 
         string = mr_pb_msg.SerializeToString()
