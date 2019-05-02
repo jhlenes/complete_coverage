@@ -53,7 +53,7 @@ class mr_obs_connector:
         mr_pb_msg.course = 2*pi - desired_true_heading # Z-axis down in OBS and up in ROS
 
         # Magnetic declination: Trondheim harbor
-        mr_pb_msg.course = 2*pi - desired_true_heading - 0.0635191637
+        mr_pb_msg.course = 2*pi - desired_true_heading - 0.063759321
 
         print('Sending SpeedCourse message: %s' % mr_pb_msg)
 

@@ -35,8 +35,9 @@ private:
   // circle of acceptance
   double R = 1.0;
 
-  const double m_maxSpeed = 1.5;
-  const double m_maxTurningRate = 0.6;
+  double m_maxSpeed;
+  double m_maxSpeedTurn;
+  double m_minSpeed;
 };
 
 } // namespace otter_coverage

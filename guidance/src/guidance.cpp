@@ -13,6 +13,11 @@ namespace otter_coverage
 Guidance::Guidance()
 {
   ros::NodeHandle nh;
+  ros::NodeHandle nhP("~");
+
+  m_maxSpeed = nhP.param("max_speed", 1.5);
+  m_maxSpeedTurn = nhP.param("max_speed_turn", 0.6);
+  m_minSpeed = nhP.param("min_speed", 0.2);
 
   ros::Subscriber dubinsPathSub =
       nh.subscribe("simple_dubins_path", 1000, &Guidance::newPath, this);
@@ -130,9 +135,9 @@ void Guidance::followPath(double x, double y, double psi)
 
   // calculate desired speed
   double u = m_maxSpeed * (1 - std::abs(y_e) / 5 - std::abs(chi_err) / M_PI_2);
-  u = std::max(u, 0.2);
+  u = std::max(u, m_minSpeed);
   if (isTurning)
-    u = 0.6;
+    u = m_maxSpeedTurn;
 
   // Publish speed and course to controller
   usv_msgs::SpeedCourse msg;

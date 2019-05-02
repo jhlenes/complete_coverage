@@ -11,12 +11,15 @@
 
   <!-- Map inflating -->
   <include file="$(find map_inflating)/launch/map_inflating.launch">
-    <arg name="inflating_radius"  value="3.0" />
+    <arg name="inflating_radius"  value="5.0" />
     <arg name="laser_filter"      value="false" />
   </include>
 
   <!-- Guidance node -->
   <node name="guidance_node" pkg="guidance" type="guidance_node" output="screen">
+    <arg name="max_speed" value="0.8" />
+    <arg name="max_speed_turn" value="0.4" />
+    <arg name="min_speed" value="0.3" />
   </node>
 
   <!-- Start connection with OBS -->

@@ -1,0 +1,7 @@
+<launch>
+
+  <!-- Visualize in rviz -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+    args="-d $(find coverage_boustrophedon)/config/real_coverage.rviz" />
+
+</launch>
