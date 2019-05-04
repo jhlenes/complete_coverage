@@ -17,9 +17,9 @@
 
   <!-- Guidance node -->
   <node name="guidance_node" pkg="guidance" type="guidance_node" output="screen">
-    <arg name="max_speed" value="0.8" />
-    <arg name="max_speed_turn" value="0.4" />
-    <arg name="min_speed" value="0.3" />
+    <param name="max_speed" value="1.0" />
+    <param name="max_speed_turn" value="0.6" />
+    <param name="min_speed" value="0.4" />
   </node>
 
   <!-- Start connection with OBS -->

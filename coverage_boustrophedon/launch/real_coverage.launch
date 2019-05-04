@@ -4,9 +4,9 @@
   <!-- launch-prefix="gdb -ex run \-\-args" -->
   <node name="coverage_node" pkg="coverage_boustrophedon" type="coverage_node" output="screen">
     <param name="tile_resolution" value="1" />
-    <param name="goal_tolerance"  value="5.0" />
+    <param name="goal_tolerance"  value="3.0" />
     <param name="scan_range"      value="20" />
-    <param name="coverage_size"   value="6" />
+    <param name="coverage_size"   value="5" />
 
     <param name="x0"              value="-100" />
     <param name="y0"              value="-50" />
@@ -19,7 +19,7 @@
     <param name="path_resolution" value="0.02" />
   </node>
 
-  <include file="$(find guidance)/launch/real_guidance.launch">
-  </include>
+  <!--<include file="$(find guidance)/launch/real_guidance.launch">
+  </include>-->
 
 </launch>
