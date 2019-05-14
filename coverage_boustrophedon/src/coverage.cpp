@@ -475,6 +475,9 @@ endCheckWallFollow:
           return true;
         }
       }
+      // TODO: Check if finished? x - nextX == 2 * m_coverageSize 
+      // TODO: If here, wall following failed? Can't move through blocked wall..
+      // return false;
     }
 
 

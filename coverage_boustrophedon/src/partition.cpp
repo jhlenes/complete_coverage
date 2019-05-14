@@ -72,9 +72,9 @@ void Partition::drawPartition(int gx, int gy)
       }
       else if (m_grid[x][y].status == Unknown)
       {
-        marker.color.r = 0.0f;
-        marker.color.g = 0.0f;
-        marker.color.b = 0.5f;
+        marker.color.r = 48.0 / 255.0;
+        marker.color.g = 48.0 / 255.0;
+        marker.color.b = 48.0 / 255.0;
       }
       if (m_grid[x][y].isCovered)
       {
