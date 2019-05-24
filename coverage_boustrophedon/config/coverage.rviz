@@ -3,7 +3,8 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /Odometry1/Shape1
       Splitter Ratio: 0.5617647171020508
     Tree Height: 761
   - Class: rviz/Selection
@@ -36,7 +37,7 @@ Visualization Manager:
       Cell Size: 3
       Class: rviz/Grid
       Color: 160; 160; 164
-      Enabled: true
+      Enabled: false
       Line Style:
         Line Width: 0.029999999329447746
         Value: Lines
@@ -49,7 +50,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 50
       Reference Frame: <Fixed Frame>
-      Value: true
+      Value: false
     - Class: Submaps
       Enabled: false
       Fade-out distance: 1
@@ -67,12 +68,12 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: InflatedMap
       Topic: /inflated_map
       Unreliable: false
       Use Timestamp: false
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /trajectory_node_list
@@ -227,6 +228,40 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: true
+      Keep: 99999
+      Name: Odometry
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Arrow
+      Topic: /p3d
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -264,7 +299,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 10
+      Scale: 14.503138542175293
       Target Frame: lidar_link
       Value: TopDownOrtho (rviz)
       X: 0
@@ -286,5 +321,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1920
-  X: 2560
+  X: 1920
   Y: 0

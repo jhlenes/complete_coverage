@@ -137,7 +137,8 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       {
         ROS_INFO("Backtracking...");
         m_backtracking = true;
-        for (auto it = path.begin() + 1; it != path.end(); it++)
+        path = aStarSPT(m_partition, {gx, gy}, {bpX, bpY});
+        for (auto it = path.begin(); it != path.end(); it++)
         {
           m_waypoints.push_back(*it);
         }
@@ -249,7 +250,7 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
 
     // Go to start
     ROS_INFO("Going to start!");
-    auto path = aStarSearch(m_partition, {gx, gy}, {startX, startY});
+    auto path = aStarSPT(m_partition, {gx, gy}, {startX, startY});
     for (auto it = path.begin() + 1; it != path.end(); it++)
     {
       m_waypoints.push_back(*it);

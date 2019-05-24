@@ -72,6 +72,7 @@ void Partition::drawPartition(int gx, int gy)
       }
       else if (m_grid[x][y].status == Unknown)
       {
+        // Same as background color in rviz
         marker.color.r = 48.0 / 255.0;
         marker.color.g = 48.0 / 255.0;
         marker.color.b = 48.0 / 255.0;

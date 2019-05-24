@@ -4,6 +4,7 @@
 #include <coverage/partition.h>
 #include <deque>
 #include <vector>
+#include <cmath>
 
 namespace otter_coverage
 {
@@ -34,7 +35,7 @@ struct Node
 static void aStarNeighbor(const Partition& partition, const Node& q, int dx,
                           int dy,
                           const std::map<std::pair<int, int>, Node>& closed,
-                          std::map<std::pair<int, int>, Node>& open)
+                          std::map<std::pair<int, int>, Node>& open, const Tile& to)
 {
   int ngx = q.gx + dx;
   int ngy = q.gy + dy;
@@ -42,8 +43,8 @@ static void aStarNeighbor(const Partition& partition, const Node& q, int dx,
       partition.getStatus(ngx, ngy) == Partition::Free)
   {
     Node node(ngx, ngy, q.gx, q.gy);
-    node.g = q.g + 1;
-    node.h = partition.dist(node.gx, node.gy, node.pgx, node.pgy);
+    node.g = q.g + std::sqrt(dx*dx + dy*dy);
+    node.h = partition.dist(ngx, ngy, to.gx, to.gy);
     node.f = node.g + node.h;
     try
     {
@@ -65,7 +66,7 @@ static void aStarNeighbor(const Partition& partition, const Node& q, int dx,
     catch (std::out_of_range)
     {
     }
-
+    
     open[{node.gx, node.gy}] = node;
   }
 }
@@ -116,15 +117,15 @@ static std::vector<Tile> aStarSearch(const Partition& partition,
     }
 
     // Neighbors
-    aStarNeighbor(partition, q, 1, 0, closed, open);
-    aStarNeighbor(partition, q, -1, 0, closed, open);
-    aStarNeighbor(partition, q, 0, 1, closed, open);
-    aStarNeighbor(partition, q, 0, -1, closed, open);
-    aStarNeighbor(partition, q, 1, 1, closed, open);
-    aStarNeighbor(partition, q, -1, 1, closed, open);
-    aStarNeighbor(partition, q, -1, 1, closed, open);
-    aStarNeighbor(partition, q, -1, -1, closed, open);
-
+    aStarNeighbor(partition, q, 1, 0, closed, open, to);
+    aStarNeighbor(partition, q, -1, 0, closed, open, to);
+    aStarNeighbor(partition, q, 0, 1, closed, open, to);
+    aStarNeighbor(partition, q, 0, -1, closed, open, to);
+    /*aStarNeighbor(partition, q, 1, 1, closed, open, to);
+    aStarNeighbor(partition, q, -1, 1, closed, open, to);
+    aStarNeighbor(partition, q, -1, 1, closed, open, to);
+    aStarNeighbor(partition, q, -1, -1, closed, open, to);
+*/
     // Push q to closed
     closed[{q.gx, q.gy}] = q;
   }
