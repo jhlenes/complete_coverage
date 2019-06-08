@@ -1,12 +1,12 @@
-# otter_ros
+# complete_coverage
 This is a collection of packages for the Robot Operating System (ROS). 
 
-Together, these packages provide an implementation of online complete coverage maneuvering for the [Otter USV](https://maritimerobotics.com/mariner-usv/otter/).
+Together, these packages provide an implementation of an online complete coverage maneuvering system for unmanned surface vehicles (USVs).
 
 ## Installation
 Navigate to the ```src/``` folder in your catkin workspace, e.g. ```cd ~/catkin_ws/src```. Then run the following (the command ```sudo rosdep init``` will print an error if you have already executed it since installing ROS. This error can be ignored.)
 ```
-git clone https://github.com/jhlenes/otter_ros.git --recurse-submodules
+git clone https://github.com/jhlenes/complete_coverage.git --recurse-submodules
 cd ..
 sudo apt update
 sudo rosdep init
@@ -20,13 +20,18 @@ source devel/setup.bash
 The guidance package implements a line-of-sight (LOS) guidance for path following of curved paths. 
 
 The launch file sets up everything required for path following. It starts nodes for SLAM, map inflation, and LOS guidance. Furthermore, it sets up rviz for visualization. 
+For simulation:
 ```
-roslaunch guidance guidance
+roslaunch guidance sim_guidance.launch
 ```
-The Otter USV is now ready start moving, all it needs is a path from one of the two complete coverage path planning methods.
+For actual USV:
+```
+roslaunch guidance real_guidance.launch
+```
+The USV is now ready start moving, all it needs is a path from one of the two complete coverage path planning methods.
 
 ## Complete coverage path planning
-There are two different implementations of complete coverage. ```coverage_binn``` implements a bio-inspired neural network (BINN) approach. ```coverage_boustrophedon``` implements an approach based on boustrophedon (back and forth like an ox in plowing) motions. ```coverage_boustrophedon``` is recommended because of fewer turns and more predictable behaviour.  
+There are two different implementations of complete coverage. ```coverage_binn``` implements a bio-inspired neural network (BINN) approach. ```coverage_boustrophedon``` implements an approach based on boustrophedon (lawnmower pattern) motions. ```coverage_boustrophedon``` is currently the best performing method.  
 ```
 roslaunch coverage_binn coverage_binn.launch
 ```
@@ -36,7 +41,7 @@ roslaunch coverage_boustrophedon coverage.launch
 Once either of these are started while the ```guidance``` is running, the USV should start moving.
 
 ## Simulation
-TODO: add [usv_simulator](https://github.com/jhlenes/usv_simulator.git) as submodule.
+To simulate the USV, use the [usv_simulator](https://github.com/jhlenes/usv_simulator.git) package.
 
 
 ## Sensors
