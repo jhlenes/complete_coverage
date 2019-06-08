@@ -52,7 +52,7 @@ sudo cp etc/xsens.rules /etc/udev/rules.d
 ```
 Unplug and replug your devices, and you are finished.
 
-If you would like to add other sensors as well, you can find the ``` ATTRS{idVendor}``` and ```ATTRS{idProduct}``` with the ```lsusb``` command. If the names are cryptic, just unplug and replug your devices to see what is changing.
+If you would like to add other sensors as well, you can find the ``` ATTRS{idVendor}``` and ```ATTRS{idProduct}``` with the ```lsusb``` command. If the names are cryptic, just disconnect and reconnect your devices to see what is changing.
 
 ## Map inflating
 The ```map_inflating``` package uses a [costmap](http://wiki.ros.org/costmap_2d) in order to inflate nearby obstacles.
