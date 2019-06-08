@@ -17,7 +17,7 @@ Guidance::Guidance()
 
   m_maxSpeed = nhP.param("max_speed", 1.5);
   m_maxSpeedTurn = nhP.param("max_speed_turn", 0.6);
-  m_minSpeed = nhP.param("min_speed", 0.2);
+  m_minSpeed = nhP.param("min_speed", 0.4);
 
   ros::Subscriber dubinsPathSub =
       nh.subscribe("simple_dubins_path", 1000, &Guidance::newPath, this);

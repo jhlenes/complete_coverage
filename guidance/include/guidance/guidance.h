@@ -28,8 +28,8 @@ private:
   double DELTA = 0.5;
 
   // time-varying lookahead distance
-  double delta_max = 5.0;
-  double delta_min = 2.0;
+  double delta_max = 4.0;
+  double delta_min = 1.0;
   double delta_k = 1.0;
 
   // circle of acceptance

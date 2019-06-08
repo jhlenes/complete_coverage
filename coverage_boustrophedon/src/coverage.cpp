@@ -70,7 +70,7 @@ void Coverage::mainLoop(ros::NodeHandle nh)
       m_partition.worldToGrid(m_pose.x, m_pose.y, gx, gy);
 
       // TODO: Get coverage size from depth
-      // m_coverageSize = gy / (m_y1 - m_y0) * 7 + 1;
+      // m_coverageSize = gy / (m_y1 - m_y0) * 5.5 + 2;
       if (m_coverageSize < m_minCoverageSize || m_minCoverageSize < 0) {
         m_minCoverageSize = m_coverageSize;
       }
@@ -135,13 +135,16 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
       std::vector<Tile> path;
       if (locateBestBacktrackingPoint(bpX, bpY, gx, gy, path))
       {
-        ROS_INFO("Backtracking...");
+        ROS_INFO_STREAM("Backtracking to: x=" << bpX << ", y=" << bpY << " From: x=" << gx << ", y=" << gy);
         m_backtracking = true;
         path = aStarSPT(m_partition, {gx, gy}, {bpX, bpY});
         for (auto it = path.begin(); it != path.end(); it++)
         {
+          static int bpCount = 1;
+          ROS_INFO_STREAM("BP path counter: " << bpCount++);
           m_waypoints.push_back(*it);
         }
+        ROS_INFO_STREAM("Backtracking waypoints added: " << int(path.size()));
 
         // Go further in m_sweepDir. Now only utilizes half of coverageSize.
         if (m_partition.withinGridBounds(bpX + 1, bpY) && freeAndNotCovered(bpX + 1, bpY))
@@ -155,7 +158,7 @@ void Coverage::boustrophedonCoverage(int gx, int gy, Goal goal)
           m_sweepDir = West;
 
         int yDir = (m_sweepDir == East ? -1 : 1);
-        for (int y = bpY + yDir; std::abs(y - bpY) <= m_coverageSize - 2; y += yDir)
+        for (int y = bpY + yDir; std::abs(y - bpY) <= m_coverageSize - 1; y += yDir)
         {
           if (m_partition.withinGridBounds(bpX, y) && m_partition.getStatus(bpX, y) == Partition::Free)
           {
@@ -251,7 +254,7 @@ Coverage::Goal Coverage::updateWPs(int gx, int gy)
     // Go to start
     ROS_INFO("Going to start!");
     auto path = aStarSPT(m_partition, {gx, gy}, {startX, startY});
-    for (auto it = path.begin() + 1; it != path.end(); it++)
+    for (auto it = path.begin(); it != path.end(); it++)
     {
       m_waypoints.push_back(*it);
     }
@@ -288,7 +291,7 @@ bool Coverage::freeAndNotCovered(int gx, int gy)
 
 bool Coverage::isBacktrackingPoint(int gx, int gy, Tile& bp)
 {
-  if (!m_partition.isCovered(gx, gy))
+  if (!m_partition.isCovered(gx, gy) || m_partition.getStatus(gx,gy) == Partition::Blocked)
   {
     return false;
   }
@@ -330,7 +333,7 @@ bool Coverage::isBacktrackingPoint(int gx, int gy, Tile& bp)
   }
 
   bool northBP = false;
-  if (gx + 1 >= 0)
+  if (gx + 1 < m_partition.getWidth())
   {
     northBP = freeAndNotCovered(gx + 1, gy) && (blockedOrCovered(gx + 1, gy + 1) || blockedOrCovered(gx + 1, gy - 1));
   }
@@ -354,6 +357,9 @@ bool Coverage::locateBestBacktrackingPoint(int& goalX, int& goalY, int tileX, in
       if (isBacktrackingPoint(gx, gy, bp))
       {
         auto path = aStarSearch(m_partition, {tileX, tileY}, {gx, gy});
+        if (path.size() == 0) {
+          continue; // BP not reachable
+        }
         path.push_back(bp);
         int distance = int(path.size());
         if (distance < minDistance || minDistance < 0)
@@ -464,7 +470,7 @@ endCheckWallFollow:
   {
     // Wall follow in sweep direction at maximum 2*m_coverageSize cells
     int nextX = gx + xOffset;
-    for (int y = gy + yOffset; std::abs(y - m_trackY) != wallFollowDist * 2; /* 2 cell overlap */ y += yOffset)
+    for (int y = gy + yOffset; std::abs(y - m_trackY) != wallFollowDist * 2 + 1; /* 1 cell overlap */ y += yOffset)
     {
       for (int x = nextX; std::abs(x - nextX) <= 2 * m_coverageSize; x -= xOffset)
       {

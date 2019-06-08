@@ -43,12 +43,12 @@ static void aStarNeighbor(const Partition& partition, const Node& q, int dx,
       partition.getStatus(ngx, ngy) == Partition::Free)
   {
     Node node(ngx, ngy, q.gx, q.gy);
-    node.g = q.g + std::sqrt(dx*dx + dy*dy);
-    node.h = partition.dist(ngx, ngy, to.gx, to.gy);
+    node.g = q.g + std::abs(ngx - q.gx) + std::abs(ngy - q.gy); //partition.dist(ngx, ngy, q.gx, q.gy);
+    node.h = std::abs(ngx - to.gx) + std::abs(ngy - to.gy); // partition.dist(ngx, ngy, to.gx, to.gy);
     node.f = node.g + node.h;
     try
     {
-      if (open.at({ngx, ngy}).f < node.f)
+      if (open.at({ngx, ngy}).g <= node.g)
       {
         return;
       }
@@ -58,7 +58,7 @@ static void aStarNeighbor(const Partition& partition, const Node& q, int dx,
     }
     try
     {
-      if (closed.at({ngx, ngy}).f < node.f)
+      if (closed.at({ngx, ngy}).g <= node.g)
       {
         return;
       }
@@ -78,7 +78,12 @@ static std::vector<Tile> aStarSearch(const Partition& partition,
   std::map<std::pair<int, int>, Node> open;
   std::map<std::pair<int, int>, Node> closed;
 
-  open[{from.gx, from.gy}] = Node(from.gx, from.gy, from.gx, from.gy);
+  Node startNode = Node(from.gx, from.gy, from.gx, from.gy);
+  startNode.g = 0.0;
+  startNode.h = std::abs(startNode.gx - to.gx) + std::abs(startNode.gy - to.gy); // partition.dist(startNode.gx, startNode.gy, to.gx, to.gy);
+  startNode.f = startNode.g + startNode.h;
+
+  open[{from.gx, from.gy}] = startNode;
 
   while (!open.empty())
   {
@@ -124,8 +129,8 @@ static std::vector<Tile> aStarSearch(const Partition& partition,
     /*aStarNeighbor(partition, q, 1, 1, closed, open, to);
     aStarNeighbor(partition, q, -1, 1, closed, open, to);
     aStarNeighbor(partition, q, -1, 1, closed, open, to);
-    aStarNeighbor(partition, q, -1, -1, closed, open, to);
-*/
+    aStarNeighbor(partition, q, -1, -1, closed, open, to);*/
+    
     // Push q to closed
     closed[{q.gx, q.gy}] = q;
   }

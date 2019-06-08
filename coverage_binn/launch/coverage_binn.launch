@@ -2,13 +2,18 @@
 <launch>
 
   <node name="coverage_binn_node" pkg="coverage_binn" type="coverage_binn_node" output="screen">
-    <param name="cell_radius"     value="5" />
-    <param name="goal_tolerance"  value="3.0" />
+    <param name="cell_radius"     value="3" />
+    <param name="goal_tolerance"  value="1.5" />
     <param name="scan_range"      value="20" />
+
+    <param name="x0"              value="-10" />
+    <param name="y0"              value="-40" />
+    <param name="x1"              value="40" />
+    <param name="y1"              value="40" />
   </node>
   
   <node name="simple_dubins_path_node" pkg="coverage_boustrophedon" type="simple_dubins_path_node" output="screen">
-    <param name="turning_radius"  value="2.5" />
+    <param name="turning_radius"  value="1.5" />
     <param name="path_resolution" value="0.10" />
   </node>
 
