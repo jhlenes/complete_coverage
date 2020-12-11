@@ -3,6 +3,13 @@ This is a collection of packages for the Robot Operating System (ROS).
 
 Together, these packages provide an implementation of an online complete coverage maneuvering system for unmanned surface vehicles (USVs).
 
+Details can be found in my Master's thesis:
+
+Lenes, Jan Henrik. "Autonomous online path planning and path-following control for complete coverage maneuvering of a USV." Master's thesis, NTNU, 2019.
+http://hdl.handle.net/11250/2622919
+
+See the code in action at: https://www.youtube.com/watch?v=hqOUKtosnFw
+
 ## Installation
 Navigate to the ```src/``` folder in your catkin workspace, e.g. ```cd ~/catkin_ws/src```. Then run the following (the command ```sudo rosdep init``` will print an error if you have already executed it since installing ROS. This error can be ignored.)
 ```
