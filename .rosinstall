@@ -1,0 +1,4 @@
+- git: {local-name: usv_simulator, uri: 'https://github.com/jhlenes/usv_simulator.git', version: 'master'}
+- git: {local-name: xsens_driver, uri: 'https://github.com/ethz-asl/ethzasl_xsens_driver.git', version: 'master'}
+- git: {local-name: rplidar_ros, uri: 'https://github.com/Slamtec/rplidar_ros.git', version: 'master'}
+
