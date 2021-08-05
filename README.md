@@ -1,5 +1,5 @@
 # complete_coverage
-This is a collection of packages for the Robot Operating System (ROS). 
+This is a collection of packages for the Robot Operating System (ROS). Works on Noetic and Melodic. 
 
 Together, these packages provide an implementation of an online complete coverage maneuvering system for unmanned surface vehicles (USVs).
 
