@@ -47,5 +47,7 @@
   <depend>nav_msgs</depend>
   <depend>rplidar_ros</depend>
   <depend>xsens_driver</depend>
+  <depend>costmap_2d</depend>
   
 </package>
+
